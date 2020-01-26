@@ -16,7 +16,7 @@ import org.http4k.routing.routes
 import org.http4k.server.ApacheServer
 import org.http4k.server.asServer
 import org.jetbrains.exposed.sql.Database
-import ray.eldath.offgrid.compoment.BearerSecurity
+import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.handler.ContractHandler
 import ray.eldath.offgrid.handler.Login
 

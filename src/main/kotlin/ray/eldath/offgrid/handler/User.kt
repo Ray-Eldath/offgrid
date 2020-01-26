@@ -14,8 +14,8 @@ import org.http4k.format.Jackson
 import org.http4k.format.Jackson.auto
 import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.select
-import ray.eldath.offgrid.compoment.Argon2
-import ray.eldath.offgrid.compoment.BearerSecurity
+import ray.eldath.offgrid.component.Argon2
+import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.dao.Authorizations
 import ray.eldath.offgrid.dao.Users
 import java.util.*

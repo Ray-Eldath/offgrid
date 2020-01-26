@@ -1,4 +1,4 @@
-package ray.eldath.offgrid.compoment
+package ray.eldath.offgrid.component
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import de.mkammerer.argon2.Argon2Factory

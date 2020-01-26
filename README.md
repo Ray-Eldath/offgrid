@@ -1,8 +1,8 @@
 # Offgrid
 
-Next-generation MPC platform, based on FHE.
+Next-generation FHE-MPC platform.
 
 
 ## Prerequisites
  - database: default MySQL
- - metrics endpoint: default UNKNOWN
+ - metrics endpoint: default Prometheus
