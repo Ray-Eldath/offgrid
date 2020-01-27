@@ -10,10 +10,11 @@ import org.http4k.core.ContentType.Companion.APPLICATION_JSON
 import org.http4k.core.Status.Companion.BAD_REQUEST
 import org.http4k.core.Status.Companion.OK
 import org.http4k.core.Status.Companion.UNAUTHORIZED
-import org.http4k.format.Jackson
 import org.http4k.format.Jackson.auto
 import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.select
+import ray.eldath.offgrid.component.ApiException
+import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.Argon2
 import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.dao.Authorizations
@@ -27,40 +28,32 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
         }
     }
 
-    data class ApiError(val code: Int, val message: String)
     data class LoginResponse(val bearer: String, val expireIn: Long)
 
     private val expireIn = (BearerSecurity.EXPIRY_MINUTES * 60).toLong()
-    private val error = Body.auto<ApiError>().toLens()
-    private val requestLens = Body.auto<LoginRequest>("Login essentials.")
+    private val requestLens = Body.auto<LoginRequest>("Login essentials.").toLens()
     private val responseLens = Body.auto<LoginResponse>("The bearer and expire.").toLens()
 
     private fun handler(): HttpHandler = { req: Request ->
-        req.run {
-            val json = Jackson.asJsonObject(req.bodyString())
-            val email = json["email"].asText()
-            val plainPassword = json["password"].asText().toByteArray()
+        val json = requestLens(req)
+        val email = json.email
+        val plainPassword = json.password.toByteArray()
 
-            if (!EmailValidator.getInstance().isValid(email))
-                Response(BAD_REQUEST)
+        if (!EmailValidator.getInstance().isValid(email))
+            throw ApiException(501, "invalid email address")
 
-            val auth: Query = (Users innerJoin Authorizations).select { Users.email eq email }.fetchSize(1)
-            if (auth.count() == 0)
-                return@run Response(UNAUTHORIZED)
+        val auth: Query = (Users innerJoin Authorizations).select { Users.email eq email }.fetchSize(1)
+        if (auth.count() == 0)
+            throw ApiException(502, "user with given email not found")
 
-            auth.forEach {
-                if (!it[Users.emailConfirmed])
-                    return@run Response(UNAUTHORIZED).with(
-                        error of ApiError(401, "unconfirmed email address")
-                    )
-                else if (!Argon2.verify(it[Authorizations.hashedPassword].bytes, plainPassword))
-                    return@run Response(UNAUTHORIZED).with(
-                        error of ApiError(402, "incorrect password")
-                    )
-            }
-
-            Response(OK)
+        auth.forEach {
+            if (!it[Users.emailConfirmed])
+                throw ApiException(401, "unconfirmed email address", UNAUTHORIZED)
+            else if (!Argon2.verify(it[Authorizations.hashedPassword].bytes, plainPassword))
+                throw ApiException(401, "incorrect password", UNAUTHORIZED)
         }
+
+        Response(OK)
     }
 
     override fun compile(): ContractRoute {
@@ -73,8 +66,8 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
             produces += APPLICATION_JSON
 
             returning(OK, responseLens to LoginResponse(UUID.randomUUID().toString(), expireIn))
-            returning(BAD_REQUEST to "invalid email address")
-            returning(UNAUTHORIZED to "incorrect email and/or password")
+            exception(BAD_REQUEST, 501, "invalid email address")
+            exception(UNAUTHORIZED, 402, "unconfirmed email address")
         } bindContract Method.POST to handler()
     }
 }
