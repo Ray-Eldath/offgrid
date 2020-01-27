@@ -1,3 +1,5 @@
+.env
+/offgrid
 *.ws.kts
 
 # Created by .ignore support plugin (hsz.mobi)

@@ -1,0 +1,30 @@
+version: "3"
+
+services:
+
+  database:
+    image: mysql:latest
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - ./offgrid/db_data:/var/lib/mysql
+      - ./database_init.mysql.sql:/docker-entrypoint-initdb.d/dsatabase_init.mysql.sql:ro
+    ports:
+      - "127.0.0.1:3306:3306"
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=${OFFGRID_DATABASE_ROOT_PASSWORD}
+      - MYSQL_USER=offgrid
+      - MYSQL_PASSWORD=${OFFGRID_DATABASE_PASSWORD}
+      - TZ=Asia/Shanghai
+
+  backend:
+    build: "."
+    #    volumes:
+    #      - ./offgrid/backend:/offgrid
+    ports:
+      - "127.0.0.1:8080:8080"
+    restart: always
+    environment:
+      - OFFGRID_BACKEND_JDBC_URL=jdbc:mysql://database:3306/offgrid

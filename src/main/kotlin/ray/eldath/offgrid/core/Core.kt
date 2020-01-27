@@ -35,14 +35,13 @@ object Core {
         allRoutes += Test(credentials, security)
     }
 
-    private const val DATABASE_DB = "offgrid"
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.
 
     private fun prepareDatabase() {
         val datasource = HikariConfig().apply {
             poolName = "offgrid"
-            jdbcUrl = "jdbc:mysql://localhost:3306/$DATABASE_DB"
-            username = System.getenv("OFFGRID_DATABASE_USERNAME")
+            jdbcUrl = System.getenv("OFFGRID_BACKEND_JDBC_URL")
+            username = "offgrid"
             password = System.getenv("OFFGRID_DATABASE_PASSWORD")
             addDataSourceProperty("cachePrepStmts", "true")
             addDataSourceProperty("prepStmtCacheSize", "250")
@@ -63,7 +62,7 @@ object Core {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        Jackson
+        println("Starting Offgrid...")
         val globalRenderer = OpenApi3(ApiInfo("Offgrid", "v1.0", "Backend API for Offgrid."), Jackson)
         val descPath = "/swagger.json"
 
@@ -76,5 +75,6 @@ object Core {
             }
 
         http.asServer(ApacheServer(8080)).start()
+        println("Offgrid now ready for requests.")
     }
 }

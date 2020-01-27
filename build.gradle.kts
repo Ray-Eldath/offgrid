@@ -1,5 +1,7 @@
 plugins {
     kotlin("jvm") version "1.3.61"
+    id("application")
+    id("com.github.johnrengelman.shadow") version "5.2.0"
 }
 
 group = "ray.eldath"
@@ -36,3 +38,7 @@ dependencies {
 }
 
 listOf(tasks.compileKotlin, tasks.compileTestKotlin).forEach { it.get().kotlinOptions.jvmTarget = "11" }
+
+application {
+    mainClassName = "ray.eldath.offgrid.core.Core"
+}
