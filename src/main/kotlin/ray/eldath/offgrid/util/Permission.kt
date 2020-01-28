@@ -30,12 +30,9 @@ enum class Permission(val id: String, vararg val childrenPermissions: Permission
     DeleteModelRegistry("MR_D"),
     ModelRegistry("MR", ListModelRegistry, CreateModelRegistry, UpdateModelRegistry, DeleteModelRegistry),
 
-    ListSelfComputationResult("CR_Ls"),
-    ListAllComputationResult("CR_La", ListSelfComputationResult),
-    TagSelfComputationResult("CR_Ta"),
-    TagAllComputationResult("CR_Ta", TagSelfComputationResult),
-    SelfComputationResult("CRs", ListSelfComputationResult, TagSelfComputationResult),
-    ComputationResult("CR", ListAllComputationResult, TagAllComputationResult),
+    SelfComputationResult("CRs"),
+    AllComputationResult("CRa", SelfComputationResult),
+    ComputationResult("CR", AllComputationResult),
 
     Graph("G"), // implies forbidden model & provider, etc.
 
@@ -54,10 +51,10 @@ enum class Permission(val id: String, vararg val childrenPermissions: Permission
         fun expand(permission: Permission): List<Permission> {
             if (permission.childrenPermissions.isEmpty())
                 return listOf(permission)
-            val r = arrayListOf<Permission>()
-            for (childPermission in permission.childrenPermissions)
-                r.addAll(expand(permission))
-            return r
+            return permission.childrenPermissions
+                .filterNotNull()
+                .flatMap { expand(it) }
+                .toMutableList().also { it.add(permission) }
         }
 
         fun expand(permissions: Array<out Permission>): List<Permission> =

@@ -28,30 +28,26 @@ object ExtraPermissions : IdTable<Int>() {
     val shield = bool("is_shield").default(true)
 }
 
+class User(id: EntityID<Int>) : IntEntity(id) {
+    companion object : IntEntityClass<User>(Users)
+
+    var username by Users.username
+    var email by Users.email
+    var emailConfirmed by Users.emailConfirmed
+    val authorization by Authorization referrersOn Authorizations.id
+}
+
+class Authorization(id: EntityID<Int>) : IntEntity(id) {
+    companion object : IntEntityClass<Authorization>(Authorizations)
+
+    var hashedPassword by Authorizations.hashedPassword
+    var role: UserRole by Authorizations.role.transform({ it.id }, { UserRole.fromId(it) })
+    var user by User referencedOn Authorizations.id
+}
+
 class ExtraPermission(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<ExtraPermission>(ExtraPermissions)
 
     val permission: Permission by ExtraPermissions.permission.transform({ it.id }, { Permission.fromId(it) })
     val isShield by ExtraPermissions.shield
-}
-
-class Authorization(id: EntityID<Int>, val extraPermissions: Set<ExtraPermission>) : IntEntity(id) {
-    companion object : IntEntityClass<Authorization>(Authorizations)
-
-    val userId by Authorizations.id
-    var hashedPassword by Authorizations.hashedPassword
-    var role: UserRole by Authorizations.role.transform({ it.id }, { UserRole.fromId(it) })
-
-    fun requirePermission(permission: Permission) {
-        role.defaultPermissions
-    }
-}
-
-class User(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<User>(Users)
-
-    var userId by Users.id
-    var username by Users.username
-    var email by Users.username
-    var authorization by Authorization referencedOn Users.id
 }

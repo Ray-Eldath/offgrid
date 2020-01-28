@@ -16,6 +16,7 @@ val http4kVersion = "3.226.0"
 val exposedVersion = "0.20.3"
 val micrometerVersion = "1.3.3"
 val logbackVersion = "1.2.3"
+val jupiterVersion = "5.6.0"
 
 dependencies {
     implementation("com.zaxxer:HikariCP:3.4.2")
@@ -38,11 +39,19 @@ dependencies {
     implementation("org.http4k:http4k-metrics-micrometer:$http4kVersion")
 
     implementation(kotlin("stdlib-jdk8"))
+
+    //
+
+    testImplementation("io.strikt:strikt-core:0.23.4")
+
+    testImplementation("org.junit.jupiter:junit-jupiter-engine:$jupiterVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter-api:$jupiterVersion")
+
     testImplementation(kotlin("script-runtime"))
 }
 
 listOf(tasks.compileKotlin, tasks.compileTestKotlin).forEach { it.get().kotlinOptions.jvmTarget = "11" }
 
-application {
-    mainClassName = "ray.eldath.offgrid.core.Core"
-}
+tasks.test { useJUnitPlatform() }
+
+application { mainClassName = "ray.eldath.offgrid.core.Core" }

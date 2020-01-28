@@ -5,6 +5,7 @@ import org.http4k.contract.RouteMetaDsl
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.string
+import ray.eldath.offgrid.util.ErrorCode
 
 data class ApiExceptionData(val code: Int, val message: String, val status: Status = Status.BAD_REQUEST)
 
@@ -37,5 +38,13 @@ object ApiExceptionHandler {
 
     fun RouteMetaDsl.exception(status: Status, code: Int, message: String) {
         this.returning(status, exception to ApiExceptionData(code, message, status))
+    }
+
+    fun RouteMetaDsl.exception(code: ErrorCode) {
+        this.exception(code.status, code.code, code.message)
+    }
+
+    fun RouteMetaDsl.exception(vararg code: ErrorCode) {
+        code.forEach { exception(it) }
     }
 }

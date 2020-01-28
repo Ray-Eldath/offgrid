@@ -3,9 +3,6 @@ import ch.qos.logback.classic.filter.ThresholdFilter
 import ray.eldath.offgrid.util.HighLightConverter
 import ray.eldath.offgrid.util.LoggerHighLightConverter
 
-import static ch.qos.logback.classic.Level.DEBUG
-import static ch.qos.logback.classic.Level.WARN
-
 conversionRule("highlight", HighLightConverter)
 conversionRule("loggerHighlight", LoggerHighLightConverter)
 

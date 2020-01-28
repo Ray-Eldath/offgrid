@@ -38,18 +38,19 @@ object Core {
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.
 
-    fun prepareDatabase() {
-        val datasource = HikariConfig().apply {
-            poolName = "offgrid"
-            jdbcUrl = System.getenv("OFFGRID_BACKEND_JDBC_URL")
-            username = "offgrid"
-            password = System.getenv("OFFGRID_DATABASE_PASSWORD")
-            addDataSourceProperty("cachePrepStmts", "true")
-            addDataSourceProperty("prepStmtCacheSize", "250")
-            metricRegistry = metrics
-        }.let { HikariDataSource(it) }
+    fun prepareDatabase(debug: Boolean = false) {
+        if (!debug) {
+            HikariConfig().apply {
+                poolName = "offgrid"
+                jdbcUrl = System.getenv("OFFGRID_BACKEND_JDBC_URL")
+                username = "offgrid"
+                password = if (debug) "1234" else System.getenv("OFFGRID_DATABASE_PASSWORD")
+                addDataSourceProperty("cachePrepStmts", "true")
+                addDataSourceProperty("prepStmtCacheSize", "250")
+                metricRegistry = metrics
+            }.let { Database.connect(HikariDataSource(it)) }
 
-        Database.connect(datasource)
+        } else Database.connect("jdbc:mysql://localhost:3306/offgrid", "com.mysql.cj.jdbc.Driver", "offgrid", "1234")
         //
         transaction {
             SchemaUtils.createMissingTablesAndColumns(*OffgridTables.tables)
