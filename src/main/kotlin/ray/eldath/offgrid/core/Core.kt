@@ -16,6 +16,7 @@ import org.http4k.server.ApacheServer
 import org.http4k.server.asServer
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.transactions.transaction
 import ray.eldath.offgrid.component.ApiExceptionHandler
 import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.dao.OffgridTables
@@ -37,7 +38,7 @@ object Core {
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.
 
-    private fun prepareDatabase() {
+    fun prepareDatabase() {
         val datasource = HikariConfig().apply {
             poolName = "offgrid"
             jdbcUrl = System.getenv("OFFGRID_BACKEND_JDBC_URL")
@@ -50,10 +51,12 @@ object Core {
 
         Database.connect(datasource)
         //
-        SchemaUtils.createMissingTablesAndColumns(*OffgridTables.tables)
+        transaction {
+            SchemaUtils.createMissingTablesAndColumns(*OffgridTables.tables)
+        }
     }
 
-    private const val ROOT = "/api/v1"
+    private const val ROOT = ""
     private val filterChain by lazy {
         ServerFilters.CatchLensFailure
             .then(MetricFilters.Server.RequestCounter(metrics))
@@ -63,6 +66,7 @@ object Core {
     @JvmStatic
     fun main(args: Array<String>) {
         println("Starting Offgrid...")
+        prepareDatabase()
         val globalRenderer = OpenApi3(ApiInfo("Offgrid", "v1.0", "Backend API for Offgrid."), Jackson)
         val descPath = "/swagger.json"
 

@@ -3,25 +3,25 @@ package ray.eldath.offgrid.dao
 import org.jetbrains.exposed.dao.IntEntity
 import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.dao.id.IdTable
 import org.jetbrains.exposed.dao.id.IntIdTable
-import org.jetbrains.exposed.sql.Column
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
 
 object Users : IntIdTable() {
     val username = varchar("username", 20)
-    val email = text("email").uniqueIndex() // avatar use Gravatar.
+    val email = varchar("email", 50).uniqueIndex() // avatar use Gravatar.
     val emailConfirmed = bool("is_email_confirmed").default(false)
 }
 
-object Authorizations : IntIdTable() {
-    override val id: Column<EntityID<Int>> = reference("user_id", Users.id)
+object Authorizations : IdTable<Int>() {
+    override val id = reference("user_id", Users.id)
 
     val hashedPassword = blob("password_hashed")
     val role = integer("role")
 }
 
-object ExtraPermissions : IntIdTable() {
+object ExtraPermissions : IdTable<Int>() {
     override val id = reference("authorization_id", Authorizations.id)
 
     val permission = varchar("permission_id", 5)

@@ -1,0 +1,49 @@
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder
+import ch.qos.logback.classic.filter.ThresholdFilter
+import ray.eldath.offgrid.util.HighLightConverter
+import ray.eldath.offgrid.util.LoggerHighLightConverter
+
+import static ch.qos.logback.classic.Level.DEBUG
+import static ch.qos.logback.classic.Level.WARN
+
+conversionRule("highlight", HighLightConverter)
+conversionRule("loggerHighlight", LoggerHighLightConverter)
+
+def FILE_PATTERN = "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+appender("Console", ConsoleAppender) {
+    withJansi = false
+    encoder(PatternLayoutEncoder) {
+        pattern = "%d{HH:mm:ss.SSS} [%thread] %highlight(%-5level) %loggerHighlight(%logger{36}) - %highlight(%msg) %n"
+    }
+
+    filter(ThresholdFilter) { level = DEBUG }
+}
+
+appender("File_WARN", RollingFileAppender) {
+    rollingPolicy(TimeBasedRollingPolicy) {
+        fileNamePattern = "log/warn.%d{yyyy-MM-dd}.log"
+        maxHistory = 30
+        totalSizeCap = "1GB"
+    }
+
+    filter(ThresholdFilter) { level = WARN }
+    encoder(PatternLayoutEncoder) { pattern = FILE_PATTERN }
+}
+
+appender("File_DEBUG", RollingFileAppender) {
+    rollingPolicy(SizeAndTimeBasedRollingPolicy) {
+        fileNamePattern = "log/debug.%d{yyyy-MM-dd}.%i.log"
+        maxFileSize = "10MB"
+        totalSizeCap = "2GB"
+    }
+
+    filter(ThresholdFilter) { level = DEBUG }
+    encoder(PatternLayoutEncoder) { pattern = FILE_PATTERN }
+}
+
+statusListener(NopStatusListener)
+// logger("java.sql.Connection", DEBUG)
+// logger("java.sql.Statement", DEBUG)
+
+root(DEBUG, ["Console", "File_WARN", "File_DEBUG"])

@@ -15,6 +15,7 @@ repositories {
 val http4kVersion = "3.226.0"
 val exposedVersion = "0.20.3"
 val micrometerVersion = "1.3.3"
+val logbackVersion = "1.2.3"
 
 dependencies {
     implementation("com.zaxxer:HikariCP:3.4.2")
@@ -22,7 +23,10 @@ dependencies {
     implementation("de.mkammerer:argon2-jvm:2.6")
     implementation("com.github.ben-manes.caffeine:caffeine:2.8.1")
     implementation("commons-validator:commons-validator:1.6")
+    implementation("org.codehaus.groovy:groovy:3.0.0-rc-3")
 
+    implementation("ch.qos.logback:logback-classic:$logbackVersion")
+    implementation("ch.qos.logback:logback-core:$logbackVersion")
     implementation("io.micrometer:micrometer-core:$micrometerVersion")
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
