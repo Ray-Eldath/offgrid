@@ -14,12 +14,10 @@ import org.http4k.format.Jackson
 import org.http4k.routing.bind
 import org.http4k.server.ApacheServer
 import org.http4k.server.asServer
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.transactions.transaction
+import org.jooq.SQLDialect
+import org.jooq.impl.DSL
 import ray.eldath.offgrid.component.ApiExceptionHandler
 import ray.eldath.offgrid.component.BearerSecurity
-import ray.eldath.offgrid.dao.OffgridTables
 import ray.eldath.offgrid.handler.ContractHandler
 import ray.eldath.offgrid.handler.Login
 import ray.eldath.offgrid.handler.Test
@@ -37,24 +35,16 @@ object Core {
     }
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.
-
-    fun prepareDatabase(debug: Boolean = false) {
-        if (!debug) {
-            HikariConfig().apply {
-                poolName = "offgrid"
-                jdbcUrl = System.getenv("OFFGRID_BACKEND_JDBC_URL")
-                username = "offgrid"
-                password = if (debug) "1234" else System.getenv("OFFGRID_DATABASE_PASSWORD")
-                addDataSourceProperty("cachePrepStmts", "true")
-                addDataSourceProperty("prepStmtCacheSize", "250")
-                metricRegistry = metrics
-            }.let { Database.connect(HikariDataSource(it)) }
-
-        } else Database.connect("jdbc:mysql://localhost:3306/offgrid", "com.mysql.cj.jdbc.Driver", "offgrid", "1234")
-        //
-        transaction {
-            SchemaUtils.createMissingTablesAndColumns(*OffgridTables.tables)
-        }
+    val jooqContext by lazy {
+        HikariConfig().apply {
+            poolName = "offgrid"
+            jdbcUrl = System.getenv("OFFGRID_BACKEND_JDBC_URL") ?: "jdbc:mysql://localhost:3306/offgrid"
+            username = "offgrid"
+            password = System.getenv("OFFGRID_DATABASE_PASSWORD") ?: "1234"
+            addDataSourceProperty("cachePrepStmts", "true")
+            addDataSourceProperty("prepStmtCacheSize", "250")
+            metricRegistry = metrics
+        }.let { DSL.using(HikariDataSource(it), SQLDialect.MYSQL) }
     }
 
     private const val ROOT = ""
@@ -67,7 +57,6 @@ object Core {
     @JvmStatic
     fun main(args: Array<String>) {
         println("Starting Offgrid...")
-        prepareDatabase()
         val globalRenderer = OpenApi3(ApiInfo("Offgrid", "v1.0", "Backend API for Offgrid."), Jackson)
         val descPath = "/swagger.json"
 

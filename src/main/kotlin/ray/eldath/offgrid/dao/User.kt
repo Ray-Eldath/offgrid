@@ -8,12 +8,14 @@ import org.jetbrains.exposed.dao.id.IntIdTable
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
 
+@Deprecated("use jOOQ now.")
 object Users : IntIdTable() {
     val username = varchar("username", 20)
     val email = varchar("email", 50).uniqueIndex() // avatar use Gravatar.
     val emailConfirmed = bool("is_email_confirmed").default(false)
 }
 
+@Deprecated("use jOOQ now.")
 object Authorizations : IdTable<Int>() {
     override val id = reference("user_id", Users.id)
 
@@ -21,6 +23,7 @@ object Authorizations : IdTable<Int>() {
     val role = integer("role")
 }
 
+@Deprecated("use jOOQ now.")
 object ExtraPermissions : IdTable<Int>() {
     override val id = reference("authorization_id", Authorizations.id)
 
@@ -28,6 +31,7 @@ object ExtraPermissions : IdTable<Int>() {
     val shield = bool("is_shield").default(true)
 }
 
+@Deprecated("use jOOQ now.")
 class User(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<User>(Users)
 
@@ -37,6 +41,7 @@ class User(id: EntityID<Int>) : IntEntity(id) {
     val authorization by Authorization referrersOn Authorizations.id
 }
 
+@Deprecated("use jOOQ now.")
 class Authorization(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<Authorization>(Authorizations)
 
@@ -45,6 +50,7 @@ class Authorization(id: EntityID<Int>) : IntEntity(id) {
     var user by User referencedOn Authorizations.id
 }
 
+@Deprecated("use jOOQ now.")
 class ExtraPermission(id: EntityID<Int>) : IntEntity(id) {
     companion object : IntEntityClass<ExtraPermission>(ExtraPermissions)
 

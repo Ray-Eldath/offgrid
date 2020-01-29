@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm") version "1.3.61"
     id("application")
     id("com.github.johnrengelman.shadow") version "5.2.0"
+    id("nu.studer.jooq") version "4.1"
 }
 
 group = "ray.eldath"
@@ -19,8 +20,8 @@ val logbackVersion = "1.2.3"
 val jupiterVersion = "5.6.0"
 
 dependencies {
+    jooqRuntime("mysql:mysql-connector-java:8.0.19")
     implementation("com.zaxxer:HikariCP:3.4.2")
-    implementation("mysql:mysql-connector-java:8.0.19")
     implementation("de.mkammerer:argon2-jvm:2.6")
     implementation("com.github.ben-manes.caffeine:caffeine:2.8.1")
     implementation("commons-validator:commons-validator:1.6")
@@ -29,6 +30,7 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("ch.qos.logback:logback-core:$logbackVersion")
     implementation("io.micrometer:micrometer-core:$micrometerVersion")
+    implementation("org.jooq:jooq")
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
@@ -55,3 +57,5 @@ listOf(tasks.compileKotlin, tasks.compileTestKotlin).forEach { it.get().kotlinOp
 tasks.test { useJUnitPlatform() }
 
 application { mainClassName = "ray.eldath.offgrid.core.Core" }
+
+apply(from = "jooq.gradle")

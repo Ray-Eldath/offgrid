@@ -15,7 +15,9 @@ import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.dao.Authorizations
 import ray.eldath.offgrid.dao.User
 import ray.eldath.offgrid.dao.Users
-import ray.eldath.offgrid.util.ErrorCode.*
+import ray.eldath.offgrid.util.ErrorCodes.INVALID_EMAIL_ADDRESS
+import ray.eldath.offgrid.util.ErrorCodes.UNCONFIRMED_EMAIL
+import ray.eldath.offgrid.util.ErrorCodes.USER_NOT_FOUND
 import ray.eldath.offgrid.util.RouteTag
 import ray.eldath.offgrid.util.allJson
 import java.util.*
@@ -62,16 +64,31 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
         Response(OK).with(responseLens of LoginResponse(bearer, expireIn))
     }
 
-    override fun compile(): ContractRoute {
-
-        return "/login" meta {
+    override fun compile(): ContractRoute =
+        "/login" meta {
             summary = "Login, use Bearer Authorization"
-            tags += RouteTag.User
             tags += RouteTag.Authorization
             allJson()
 
             returning(OK, responseLens to LoginResponse(UUID.randomUUID().toString(), expireIn))
             exception(INVALID_EMAIL_ADDRESS, UNCONFIRMED_EMAIL, USER_NOT_FOUND)
         } bindContract Method.POST to handler()
+}
+
+class Logout(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
+
+    private fun handler(): HttpHandler = { req ->
+//        BearerSecurity.invalidate(req)
+        Response(OK)
     }
+
+    override fun compile(): ContractRoute =
+        "/logout" meta {
+            summary = "Logout"
+            tags += RouteTag.Authorization
+            tags += RouteTag.Secure
+            allJson()
+
+            returning(OK to "given bearer has been invalidate in the cache")
+        } bindContract Method.GET to handler()
 }

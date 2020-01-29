@@ -9,9 +9,40 @@ import org.http4k.core.then
 import org.http4k.filter.ServerFilters
 import org.http4k.lens.RequestContextKey
 import ray.eldath.offgrid.dao.User
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorizations
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermissions
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.Users
+import ray.eldath.offgrid.util.ErrorCodes.permissionDenied
+import ray.eldath.offgrid.util.Permission
+import ray.eldath.offgrid.util.Permission.Companion.expand
 import ray.eldath.offgrid.util.sidecar
 import java.util.*
 import java.util.concurrent.TimeUnit
+
+data class InboundUser(
+    val user: Users,
+    val authorization: Authorizations,
+    val extraPermission: Collection<ExtraPermissions>,
+    val bearer: String
+) {
+    private val expandedPermissions by lazy {
+        val r = hashMapOf<Permission, Boolean>()
+
+        authorization.role.defaultPermissions.forEach { r[it] = true }
+        extraPermission.forEach {
+            it.permissionId.expand().forEach { i -> r[i] = !it.isShield }
+        }
+
+        r
+    }
+
+    fun requirePermission(vararg permissions: Permission) {
+        permissions.expand()
+            .filter { expandedPermissions[it]?.let { b -> !b } ?: true }
+            .takeIf { it.isNotEmpty() }
+            ?.let { throw permissionDenied(it)() }
+    }
+}
 
 object BearerSecurity : Security {
     const val EXPIRY_MINUTES = 60

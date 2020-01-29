@@ -1,5 +1,7 @@
 package ray.eldath.offgrid.util
 
+import ray.eldath.offgrid.util.Permission.Companion.expand
+
 enum class Permission(val id: String, vararg val childrenPermissions: Permission? = arrayOf()) {
     ListUser("U_L"),
     CreateUser("U_C"),
@@ -48,17 +50,16 @@ enum class Permission(val id: String, vararg val childrenPermissions: Permission
     companion object {
         fun fromId(id: String) = values().first { it.id == id }
 
-        fun expand(permission: Permission): List<Permission> {
-            if (permission.childrenPermissions.isEmpty())
-                return listOf(permission)
-            return permission.childrenPermissions
+        fun Permission.expand(): List<Permission> =
+            if (this.childrenPermissions.isEmpty())
+                listOf(this)
+            else this.childrenPermissions
                 .filterNotNull()
-                .flatMap { expand(it) }
-                .toMutableList().also { it.add(permission) }
-        }
+                .flatMap { it.expand() }
+                .toMutableList().also { it.add(this) }
 
-        fun expand(permissions: Array<out Permission>): List<Permission> =
-            permissions.flatMap { expand(it) }
+        fun Array<out Permission>.expand(): List<Permission> =
+            this.flatMap { it.expand() }
     }
 }
 
@@ -92,7 +93,7 @@ enum class UserRole(val id: Int, val displayName: String, vararg defaultPermissi
     SelfProviderAdmin(1, "SelfProviderAdmin", Permission.SelfProviderMetrics),
     Root(0, "Root", Permission.Root);
 
-    val defaultPermissions = Permission.expand(defaultPermissions)
+    val defaultPermissions = defaultPermissions.expand()
 
     companion object {
         fun fromId(id: Int) = values().first { it.id == id }

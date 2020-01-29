@@ -1,0 +1,51 @@
+jooq {
+    generateSchemaSourceOnCompilation = true
+
+    sample(sourceSets.main) {
+        jdbc {
+            driver = 'com.mysql.cj.jdbc.Driver'
+            url = 'jdbc:mysql://localhost:3306/offgrid'
+            user = 'offgrid'
+            password = '1234'
+        }
+
+        generator {
+            target { packageName = 'ray.eldath.offgrid.generated' }
+
+            database {
+                name = 'org.jooq.meta.mysql.MySQLDatabase'
+                includes = '.*offgrid.*'
+
+                forcedTypes {
+                    forcedType {
+                        name = 'boolean'
+                        includeExpression = '.*'
+                        includeTypes = '(?i:(TINY|SMALL|MEDIUM|BIG)?INT(UNSIGNED)?\\(1\\))'
+                    }
+
+                    forcedType {
+                        userType = 'ray.eldath.offgrid.util.Permission'
+                        converter = 'ray.eldath.offgrid.util.PermissionConverter'
+                        includeExpression = '.*\\.*permission.*'
+                        includeTypes = 'varchar\\(5\\)'
+                    }
+
+                    forcedType {
+                        userType = 'ray.eldath.offgrid.util.UserRole'
+                        converter = 'ray.eldath.offgrid.util.UserRoleConverter'
+                        includeExpression = '.*\\.role.*'
+                        includeTypes = 'INT(UNSIGNED)?'
+                    }
+                }
+            }
+
+            generate {
+                relations = true
+                deprecated = false
+                records = true
+                immutablePojos = true
+                fluentSetters = true
+            }
+        }
+    }
+}

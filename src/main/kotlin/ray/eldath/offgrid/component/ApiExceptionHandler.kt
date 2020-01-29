@@ -9,7 +9,7 @@ import ray.eldath.offgrid.util.ErrorCode
 
 data class ApiExceptionData(val code: Int, val message: String, val status: Status = Status.BAD_REQUEST)
 
-class ApiException(val data: ApiExceptionData) : Exception() {
+data class ApiException(val data: ApiExceptionData) : Exception() {
 
     companion object {
         operator fun invoke(code: Int, message: String, status: Status = Status.BAD_REQUEST) =
@@ -28,7 +28,7 @@ object ApiExceptionHandler {
                     next(request)
                 } catch (e: ApiException) {
                     val data = e.data
-//                    val json = Jackson.asJsonString(e)   | not work, as http4k#361
+//                    val json = Jackson.asJsonString(e)   | dont work, see http4k#361
                     val json = jacksonObjectMapper().writeValueAsString(data)
                     Response(data.status).with(Body.string(ContentType.APPLICATION_JSON).toLens() of json)
                 }
