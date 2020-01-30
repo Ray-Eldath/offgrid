@@ -4,14 +4,16 @@ import com.github.benmanes.caffeine.cache.Caffeine
 import de.mkammerer.argon2.Argon2Factory
 import org.http4k.contract.security.Security
 import org.http4k.core.Filter
+import org.http4k.core.Request
 import org.http4k.core.RequestContexts
 import org.http4k.core.then
 import org.http4k.filter.ServerFilters
 import org.http4k.lens.RequestContextKey
-import ray.eldath.offgrid.dao.User
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorizations
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermissions
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.Users
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
+import ray.eldath.offgrid.util.ErrorCodes.LOGIN_REQUIRED
+import ray.eldath.offgrid.util.ErrorCodes.commonBadRequest
 import ray.eldath.offgrid.util.ErrorCodes.permissionDenied
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.Permission.Companion.expand
@@ -20,10 +22,9 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 
 data class InboundUser(
-    val user: Users,
-    val authorization: Authorizations,
-    val extraPermission: Collection<ExtraPermissions>,
-    val bearer: String
+    val user: User,
+    val authorization: Authorization,
+    val extraPermission: Collection<ExtraPermission>
 ) {
     private val expandedPermissions by lazy {
         val r = hashMapOf<Permission, Boolean>()
@@ -48,14 +49,14 @@ object BearerSecurity : Security {
     const val EXPIRY_MINUTES = 60
 
     private val contexts = RequestContexts()
-    val credentials = RequestContextKey.required<User>(contexts)
+    val credentials = RequestContextKey.required<InboundUser>(contexts)
 
     private val caffeine = Caffeine.newBuilder().apply {
         expireAfterAccess(EXPIRY_MINUTES.toLong(), TimeUnit.MINUTES)
         recordStats()
-    }.build<String, User>()
+    }.build<String, InboundUser>()
 
-    fun authorize(user: User): String =
+    fun authorize(user: InboundUser): String =
         UUID.randomUUID().toString().sidecar {
             caffeine.put(it, user)
         }
@@ -70,6 +71,13 @@ object BearerSecurity : Security {
                 caffeine.getIfPresent(it)
             })
     }
+
+    fun Request.bearerToken(): String =
+        ((header("Authorization") ?: throw LOGIN_REQUIRED())
+            .trim()
+            .takeIf { it.startsWith("Bearer") } ?: throw commonBadRequest("malformed Bearer")())
+            .substringAfter("Bearer")
+            .trim()
 }
 
 object Argon2 {

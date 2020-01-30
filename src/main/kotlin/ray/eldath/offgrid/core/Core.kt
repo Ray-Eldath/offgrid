@@ -21,6 +21,7 @@ import ray.eldath.offgrid.component.ApiExceptionHandler
 import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.handler.ContractHandler
 import ray.eldath.offgrid.handler.Login
+import ray.eldath.offgrid.handler.Logout
 import ray.eldath.offgrid.handler.Test
 
 
@@ -36,6 +37,8 @@ object Core {
 
     init {
         allRoutes += Login(credentials, security)
+        allRoutes += Logout(credentials, security)
+        //
         allRoutes += Test(credentials, security)
     }
 

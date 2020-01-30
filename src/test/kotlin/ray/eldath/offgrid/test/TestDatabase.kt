@@ -1,7 +1,5 @@
 package ray.eldath.offgrid.test
 
-import org.jooq.DSLContext
-import org.jooq.impl.DSL
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import ray.eldath.offgrid.core.Core.enableDebug
@@ -9,10 +7,14 @@ import ray.eldath.offgrid.core.Core.jooqContext
 import ray.eldath.offgrid.generated.offgrid.tables.Authorizations.AUTHORIZATIONS
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions.EXTRA_PERMISSIONS
 import ray.eldath.offgrid.generated.offgrid.tables.Users.USERS
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
+import ray.eldath.offgrid.handler.Login
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
+import ray.eldath.offgrid.util.transaction
 import strikt.api.expect
 import strikt.api.expectThat
+import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.isEqualTo
 import strikt.assertions.isTrue
 
@@ -51,31 +53,37 @@ object TestDatabase {
 
             expectThat(auth.userId).isEqualTo(executed)
 
-            val extra = newRecord(EXTRA_PERMISSIONS).apply {
+            val extra1 = newRecord(EXTRA_PERMISSIONS).apply {
                 authorizationId = auth.userId
                 permissionId = Permission.ComputationResult
                 isShield = true
             }
 
-            expectThat(extra.authorizationId).isEqualTo(auth.userId)
+            val extra2 = newRecord(EXTRA_PERMISSIONS).apply {
+                authorizationId = auth.userId
+                permissionId = Permission.SelfComputationResult
+                isShield = false
+            }
+
+            expectThat(extra1.insert()).isEqualTo(1)
+            expectThat(extra2.insert()).isEqualTo(1)
         }
+        println("insert test data successfully")
     }
 
     @Test
-    fun `select User joining Authorization`() {
-        val (email, confirmed, role) = transaction {
-            val u = USERS
-            val a = AUTHORIZATIONS
+    fun `select User join Authorization and ExtraPermission`() {
+        val (user, auth, list) = Login.fetchInboundUser("alpha@beta.omega")
 
-            select(u.EMAIL, u.IS_EMAIL_CONFIRMED, a.ROLE)
-                .from(u)
-                .innerJoin(a).onKey()
-                .single()
-        }
+        val authId = auth.userId
         expect {
-            that(email).isEqualTo("alpha@beta.omega")
-            that(confirmed).isTrue()
-            that(role).isEqualTo(UserRole.Root)
+            that(user.email).isEqualTo("alpha@beta.omega")
+            that(user.isEmailConfirmed).isTrue()
+            that(auth.role).isEqualTo(UserRole.Root)
+            that(list).containsExactlyInAnyOrder(
+                ExtraPermission(authId, Permission.ComputationResult, true),
+                ExtraPermission(authId, Permission.SelfComputationResult, false)
+            )
         }
     }
 
@@ -84,14 +92,8 @@ object TestDatabase {
         transaction {
             delete(USERS)
                 .where(USERS.USERNAME.eq("Ray Eldath"))
+                .execute()
         }
-    }
-
-    private fun <T> transaction(context: DSLContext = jooqContext, block: DSLContext.() -> T): T {
-        var a: T? = null
-        context.transaction { cfg ->
-            a = DSL.using(cfg).block()
-        }
-        return a!!
+        println("delete test data successfully")
     }
 }

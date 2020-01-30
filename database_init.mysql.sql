@@ -35,5 +35,6 @@ create table Extra_Permissions
     permission_id    varchar(5)           not null,
     is_shield        tinyint(1) default 1 not null,
     constraint fk_ExtraPermissions_authorization_id_user_id
-        foreign key (authorization_id) references Authorizations (user_id)
+        foreign key (authorization_id) references offgrid.Authorizations (user_id)
+            on delete cascade
 );

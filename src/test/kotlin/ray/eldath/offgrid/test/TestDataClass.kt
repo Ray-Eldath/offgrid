@@ -3,9 +3,8 @@ package ray.eldath.offgrid.test
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import ray.eldath.offgrid.component.InboundUser
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorizations
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermissions
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.Users
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.util.ErrorCodes.permissionDenied
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.Permission.*
@@ -60,12 +59,13 @@ class TestDataClass {
 
     @Nested
     inner class TestInboundUser {
-        private val user = Users(1, "Ray Eldath", "ray.eldath@aol.com", true)
+        private val user =
+            ray.eldath.offgrid.generated.offgrid.tables.pojos.User(1, "Ray Eldath", "ray.eldath@aol.com", true)
 
         @Test
         fun `test failed requirePermission`() {
-            val auth = Authorizations(1, "".toByteArray(), UserRole.PlatformAdmin)
-            val inbound = InboundUser(user, auth, listOf(ExtraPermissions(1, User, true)), "")
+            val auth = Authorization(1, "".toByteArray(), UserRole.PlatformAdmin)
+            val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, true)))
 
             expectCatching { inbound.requirePermission(CreateUser) }.failed()
                 .isEqualTo(permissionDeniedException(CreateUser)).get(::println)
@@ -79,8 +79,8 @@ class TestDataClass {
 
         @Test
         fun `test success requirePermission`() {
-            val auth = Authorizations(1, "".toByteArray(), UserRole.MetricsAdmin)
-            val inbound = InboundUser(user, auth, listOf(ExtraPermissions(1, User, false)), "")
+            val auth = Authorization(1, "".toByteArray(), UserRole.MetricsAdmin)
+            val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, false)))
 
             expectCatching { inbound.requirePermission(CreateUser, DeleteUser, User) }.succeeded().get(::println)
             expectCatching { inbound.requirePermission(Metrics, SystemMetrics) }.succeeded().get(::println)

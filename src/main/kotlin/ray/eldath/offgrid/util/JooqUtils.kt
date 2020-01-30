@@ -1,6 +1,17 @@
 package ray.eldath.offgrid.util
 
 import org.jooq.Converter
+import org.jooq.DSLContext
+import org.jooq.impl.DSL
+import ray.eldath.offgrid.core.Core
+
+fun <T> transaction(context: DSLContext = Core.jooqContext, block: DSLContext.() -> T): T {
+    var a: T? = null
+    context.transaction { cfg ->
+        a = DSL.using(cfg).block()
+    }
+    return a!!
+}
 
 class PermissionConverter : Converter<String, Permission> {
 

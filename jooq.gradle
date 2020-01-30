@@ -11,6 +11,7 @@ jooq {
 
         generator {
             target { packageName = 'ray.eldath.offgrid.generated' }
+            strategy { name = 'ray.eldath.offgrid.jooq.SingularPojoGenerationStrategy' }
 
             database {
                 name = 'org.jooq.meta.mysql.MySQLDatabase'
@@ -44,6 +45,7 @@ jooq {
                 deprecated = false
                 records = true
                 immutablePojos = true
+                pojosEqualsAndHashCode = true
                 fluentSetters = true
             }
         }
