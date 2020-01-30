@@ -28,11 +28,12 @@ object TestDatabase {
         jooqContext
     }
 
+    private const val hk =
+        "\$argon2i\$v=19\$m=65536,t=10,p=1\$sOTA4jpvIiEfrIl6qacjcA\$6BcaWsQNTPCHT1f0kRQeEm3NmT8yAN8UMJJs5oczD70" // 123
+
     @Test
     @Order(1) // lower means higher priority
     fun `insert test data`() {
-        val hk =
-            "\$argon2i\$v=19\$m=65536,t=10,p=1\$sOTA4jpvIiEfrIl6qacjcA\$6BcaWsQNTPCHT1f0kRQeEm3NmT8yAN8UMJJs5oczD70"
         transaction {
             val user = newRecord(USERS).apply {
                 username = "Ray Eldath"

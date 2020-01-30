@@ -68,13 +68,13 @@ class TestDataClass {
             val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, true)))
 
             expectCatching { inbound.requirePermission(CreateUser) }.failed()
-                .isEqualTo(permissionDeniedException(CreateUser)).get(::println)
+                .isEqualTo(permissionDeniedException(CreateUser)).println()
 
             expectCatching { inbound.requirePermission(User, DeleteUser) }.failed()
-                .isEqualTo(permissionDeniedException(User, DeleteUser)).get(::println)
+                .isEqualTo(permissionDeniedException(User, DeleteUser)).println()
 
             expectCatching { inbound.requirePermission(ComputationResult) }.failed()
-                .isEqualTo(permissionDeniedException(ComputationResult)).get(::println)
+                .isEqualTo(permissionDeniedException(ComputationResult)).println()
         }
 
         @Test
@@ -82,8 +82,8 @@ class TestDataClass {
             val auth = Authorization(1, "".toByteArray(), UserRole.MetricsAdmin)
             val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, false)))
 
-            expectCatching { inbound.requirePermission(CreateUser, DeleteUser, User) }.succeeded().get(::println)
-            expectCatching { inbound.requirePermission(Metrics, SystemMetrics) }.succeeded().get(::println)
+            expectCatching { inbound.requirePermission(CreateUser, DeleteUser, User) }.succeeded().println()
+            expectCatching { inbound.requirePermission(Metrics, SystemMetrics) }.succeeded().println()
         }
 
         private fun permissionDeniedException(vararg require: Permission) =

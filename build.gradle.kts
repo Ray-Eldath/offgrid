@@ -11,6 +11,7 @@ version = "1.0-SNAPSHOT"
 val http4kVersion = "3.226.0"
 val micrometerVersion = "1.3.3"
 val logbackVersion = "1.2.3"
+val striktVersion = "0.23.4"
 val jupiterVersion = "5.6.0"
 val databaseConnector = "mysql:mysql-connector-java:8.0.19"
 
@@ -52,8 +53,8 @@ dependencies {
 
     //
 
-    testImplementation("io.strikt:strikt-core:0.23.4")
-
+    testImplementation("io.strikt:strikt-core:$striktVersion")
+    testImplementation("io.strikt:strikt-jackson:$striktVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-engine:$jupiterVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-api:$jupiterVersion")
 

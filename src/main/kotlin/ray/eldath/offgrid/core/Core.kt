@@ -30,10 +30,10 @@ object Core {
     val enableDebug
         get() = debug.run { debug = true }
 
-    private val allRoutes = arrayListOf<ContractHandler>()
+    val security = BearerSecurity
+    val credentials = BearerSecurity.credentials
 
-    private val security = BearerSecurity
-    private val credentials = BearerSecurity.credentials
+    private val allRoutes = arrayListOf<ContractHandler>()
 
     init {
         allRoutes += Login(credentials, security)
