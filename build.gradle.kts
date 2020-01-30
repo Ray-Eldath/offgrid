@@ -18,9 +18,12 @@ val exposedVersion = "0.20.3"
 val micrometerVersion = "1.3.3"
 val logbackVersion = "1.2.3"
 val jupiterVersion = "5.6.0"
+val databaseConnector = "mysql:mysql-connector-java:8.0.19"
 
 dependencies {
-    jooqRuntime("mysql:mysql-connector-java:8.0.19")
+    jooqRuntime(databaseConnector)
+    implementation(databaseConnector)
+    implementation("org.jooq:jooq")
     implementation("com.zaxxer:HikariCP:3.4.2")
     implementation("de.mkammerer:argon2-jvm:2.6")
     implementation("com.github.ben-manes.caffeine:caffeine:2.8.1")
@@ -30,7 +33,6 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("ch.qos.logback:logback-core:$logbackVersion")
     implementation("io.micrometer:micrometer-core:$micrometerVersion")
-    implementation("org.jooq:jooq")
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")

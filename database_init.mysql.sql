@@ -8,13 +8,15 @@ flush privileges;
 
 #
 
-create table Extra_Permissions
+create table Users
 (
-    authorization_id int               not null,
-    permission_id    varchar(5)        not null,
-    is_shield        bool default true not null,
-    constraint fk_ExtraPermissions_authorization_id_user_id
-        foreign key (authorization_id) references Authorizations (user_id)
+    id                 int auto_increment
+        primary key,
+    username           varchar(20)          not null,
+    email              varchar(50)          not null,
+    is_email_confirmed tinyint(1) default 0 not null,
+    constraint Users_email_unique
+        unique (email)
 );
 
 create table Authorizations
@@ -24,15 +26,14 @@ create table Authorizations
     role            int  not null,
     constraint fk_Authorizations_user_id_id
         foreign key (user_id) references Users (id)
+            on delete cascade
 );
 
-create table Users
+create table Extra_Permissions
 (
-    id                 int auto_increment
-        primary key,
-    username           varchar(20)           not null,
-    email              varchar(50)           not null,
-    is_email_confirmed boolean default false not null,
-    constraint Users_email_unique
-        unique (email)
+    authorization_id int                  not null,
+    permission_id    varchar(5)           not null,
+    is_shield        tinyint(1) default 1 not null,
+    constraint fk_ExtraPermissions_authorization_id_user_id
+        foreign key (authorization_id) references Authorizations (user_id)
 );

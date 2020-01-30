@@ -26,7 +26,7 @@ class TestDataClass {
         @Test
         fun `test single permission expand`() {
             expectThat(ApproveUserApplication.expand())
-                .isEqualTo(listOf(ApproveUserApplication))
+                .containsExactlyInAnyOrder(ApproveUserApplication)
         }
 
         @Test
