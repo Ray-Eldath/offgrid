@@ -14,8 +14,6 @@ import java.util.*
 typealias ApplicationOrInbound = Either<UserApplication, InboundUser>
 
 enum class UserRegistrationStatus(val code: Int) {
-    @Deprecated("left side of either just remains unset to indicate successful result")
-    AUTHORIZED(1),
     NOT_FOUND(2),
     UNCONFIRMED(3),
     APPLICATION_PENDING(10),

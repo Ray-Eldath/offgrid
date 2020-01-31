@@ -1,6 +1,7 @@
 .env
 /offgrid
 *.ws.kts
+Experiment.*
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Gradle template

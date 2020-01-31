@@ -36,6 +36,8 @@ allprojects {
 
 dependencies {
     jooqRuntime(project(":preBuild"))
+    implementation("com.aliyun:aliyun-java-sdk-core:4.4.9")
+    implementation("com.aliyun:aliyun-java-sdk-dm:3.3.1")
     implementation("com.zaxxer:HikariCP:3.4.2")
     implementation("de.mkammerer:argon2-jvm:2.6")
     implementation("com.github.ben-manes.caffeine:caffeine:2.8.1")

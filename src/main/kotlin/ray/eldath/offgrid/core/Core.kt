@@ -19,10 +19,8 @@ import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import ray.eldath.offgrid.component.ApiExceptionHandler
 import ray.eldath.offgrid.component.BearerSecurity
-import ray.eldath.offgrid.handler.ContractHandler
-import ray.eldath.offgrid.handler.Login
-import ray.eldath.offgrid.handler.Logout
-import ray.eldath.offgrid.handler.Test
+import ray.eldath.offgrid.handler.*
+import java.io.File
 
 
 object Core {
@@ -38,6 +36,7 @@ object Core {
     init {
         allRoutes += Login(credentials, security)
         allRoutes += Logout(credentials, security)
+        allRoutes += Register(credentials, security)
         //
         allRoutes += Test(credentials, security)
     }
@@ -47,9 +46,9 @@ object Core {
         if (!debug)
             HikariConfig().apply {
                 poolName = "offgrid"
-                jdbcUrl = System.getenv("OFFGRID_BACKEND_JDBC_URL")
+                jdbcUrl = getEnv("OFFGRID_BACKEND_JDBC_URL")
                 username = "offgrid"
-                password = System.getenv("OFFGRID_DATABASE_PASSWORD")
+                password = getEnv("OFFGRID_DATABASE_PASSWORD")
                 addDataSourceProperty("cachePrepStmts", "true")
                 addDataSourceProperty("prepStmtCacheSize", "250")
                 metricRegistry = metrics
@@ -67,6 +66,7 @@ object Core {
     @JvmStatic
     fun main(args: Array<String>) {
         println("Starting Offgrid...")
+        loadEnv()
         val globalRenderer = OpenApi3(ApiInfo("Offgrid", "v1.0", "Backend API for Offgrid."), Jackson)
         val descPath = "/swagger.json"
 
@@ -81,4 +81,22 @@ object Core {
         http.asServer(ApacheServer(8080)).start()
         println("Offgrid now ready for requests.")
     }
+
+    fun loadEnv() {
+        val file = File(System.getProperty("user.dir") + "/.env")
+        if (!file.exists())
+            return
+
+        file.bufferedReader().useLines { seq ->
+            seq.map { it.split("=") }
+                .filter { it.size == 2 }
+                .forEach { System.setProperty("offgrid.env.${it[0]}", it[1]) }
+        }
+    }
+
+    fun getEnv(key: String) =
+        if (System.getenv(key) != null)
+            System.getenv(key)
+        else
+            System.getProperty("offgrid.env.$key")
 }

@@ -18,7 +18,7 @@ create table User_Applications
     last_request_token_time  datetime             not null,
     hashed_password          varchar(150)         null,
     username                 varchar(20)          null,
-    is_application_pending   tinyint(1) default 0 not null,
+    is_application_pending   tinyint(1) default 1 not null,
     constraint User_Applications_email_uindex
         unique (email)
 );
