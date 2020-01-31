@@ -83,15 +83,14 @@ object BearerSecurity : Security {
 object Argon2 {
     private val argon2 = Argon2Factory.create()
 
-    fun hash(password: String): String {
-        val a = password.toByteArray()
-        return argon2.hash(10, 65536, 1, a).sidecar {
-            argon2.wipeArray(a)
+    fun hash(password: ByteArray): String {
+        return argon2.hash(10, 65536, 1, password).sidecar {
+            argon2.wipeArray(password)
         }
     }
 
-    fun verify(hashedPassword: ByteArray, password: ByteArray): Boolean {
-        return argon2.verify(String(hashedPassword), password).sidecar {
+    fun verify(hashedPassword: String, password: ByteArray): Boolean {
+        return argon2.verify(hashedPassword, password).sidecar {
             argon2.wipeArray(password)
         }
     }

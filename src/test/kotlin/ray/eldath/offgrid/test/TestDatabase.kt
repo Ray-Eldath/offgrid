@@ -2,13 +2,13 @@ package ray.eldath.offgrid.test
 
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.TestInstance.Lifecycle
+import ray.eldath.offgrid.component.UserStatus
 import ray.eldath.offgrid.core.Core.enableDebug
 import ray.eldath.offgrid.core.Core.jooqContext
 import ray.eldath.offgrid.generated.offgrid.tables.Authorizations.AUTHORIZATIONS
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions.EXTRA_PERMISSIONS
 import ray.eldath.offgrid.generated.offgrid.tables.Users.USERS
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
-import ray.eldath.offgrid.handler.Login
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
 import ray.eldath.offgrid.util.transaction
@@ -16,7 +16,6 @@ import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.isEqualTo
-import strikt.assertions.isTrue
 
 @TestInstance(Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -38,7 +37,6 @@ object TestDatabase {
             val user = newRecord(USERS).apply {
                 username = "Ray Eldath"
                 email = "alpha@beta.omega"
-                isEmailConfirmed = true
             }
             user.store()
             val executed = user.id
@@ -47,7 +45,7 @@ object TestDatabase {
             val auth = newRecord(AUTHORIZATIONS).apply {
                 userId = executed
                 role = UserRole.Root
-                setPasswordHashed(*(hk.toByteArray()))
+                hashedPassword = hk
             }
             auth.insert()
             println("inserted authId: ${auth.userId}")
@@ -74,17 +72,22 @@ object TestDatabase {
 
     @Test
     fun `select User join Authorization and ExtraPermission`() {
-        val (user, auth, list) = Login.fetchInboundUser("alpha@beta.omega")
+        val (left, right) = UserStatus.fetchByEmail("alpha@beta.omega")
 
-        val authId = auth.userId
         expect {
-            that(user.email).isEqualTo("alpha@beta.omega")
-            that(user.isEmailConfirmed).isTrue()
-            that(auth.role).isEqualTo(UserRole.Root)
-            that(list).containsExactlyInAnyOrder(
-                ExtraPermission(authId, Permission.ComputationResult, true),
-                ExtraPermission(authId, Permission.SelfComputationResult, false)
-            )
+            expectThat(left).isEqualTo(UserStatus.AUTHORIZED)
+
+            expectThat(right) {
+                val (user, auth, list) = right!!
+                val authId = auth.userId
+
+                that(user.email).isEqualTo("alpha@beta.omega")
+                that(auth.role).isEqualTo(UserRole.Root)
+                that(list).containsExactlyInAnyOrder(
+                    ExtraPermission(authId, Permission.ComputationResult, true),
+                    ExtraPermission(authId, Permission.SelfComputationResult, false)
+                )
+            }
         }
     }
 

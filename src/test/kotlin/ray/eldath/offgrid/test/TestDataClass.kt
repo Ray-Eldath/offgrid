@@ -60,11 +60,11 @@ class TestDataClass {
     @Nested
     inner class TestInboundUser {
         private val user =
-            ray.eldath.offgrid.generated.offgrid.tables.pojos.User(1, "Ray Eldath", "ray.eldath@aol.com", true)
+            ray.eldath.offgrid.generated.offgrid.tables.pojos.User(1, "Ray Eldath", "ray.eldath@aol.com")
 
         @Test
         fun `test failed requirePermission`() {
-            val auth = Authorization(1, "".toByteArray(), UserRole.PlatformAdmin)
+            val auth = Authorization(1, "", UserRole.PlatformAdmin)
             val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, true)))
 
             expectCatching { inbound.requirePermission(CreateUser) }.failed()
@@ -79,7 +79,7 @@ class TestDataClass {
 
         @Test
         fun `test success requirePermission`() {
-            val auth = Authorization(1, "".toByteArray(), UserRole.MetricsAdmin)
+            val auth = Authorization(1, "", UserRole.MetricsAdmin)
             val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, false)))
 
             expectCatching { inbound.requirePermission(CreateUser, DeleteUser, User) }.succeeded().println()
