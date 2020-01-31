@@ -16,6 +16,7 @@ import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNull
 
 @TestInstance(Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -75,7 +76,7 @@ object TestDatabase {
         val (left, right) = UserStatus.fetchByEmail("alpha@beta.omega")
 
         expect {
-            expectThat(left).isEqualTo(UserStatus.AUTHORIZED)
+            expectThat(left).isNull()
 
             expectThat(right) {
                 val (user, auth, list) = right!!

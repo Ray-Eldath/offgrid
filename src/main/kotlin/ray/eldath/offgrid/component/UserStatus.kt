@@ -12,6 +12,7 @@ import ray.eldath.offgrid.util.transaction
 import java.util.*
 
 enum class UserStatus(val code: Int) {
+    @Deprecated("left side of either just remains unset to indicate successful result")
     AUTHORIZED(1),
     NOT_FOUND(2),
     UNCONFIRMED(3),
@@ -22,7 +23,7 @@ enum class UserStatus(val code: Int) {
         fun fetchByEmail(email: String): Either<UserStatus, InboundUser> {
             val inbound = fetchInboundUser(email)
             if (inbound.isPresent)
-                return (AUTHORIZED to inbound.get()).toEither()
+                return inbound.get().toRight()
             return transaction {
                 val ua = UserApplications.USER_APPLICATIONS
                 val applicationOptional = select()
@@ -80,9 +81,9 @@ enum class UserStatus(val code: Int) {
 data class Either<out L, out R>(val left: L?, val right: R?) {
 
     val leftOrThrow: L
-        get() = left ?: throw NullPointerException("left value of $this is null")
+        get() = left ?: throw NullPointerException("left value of $this is unset")
     val rightOrThrow: R
-        get() = right ?: throw NullPointerException("right value of $this is null")
+        get() = right ?: throw NullPointerException("right value of $this is unset")
 
     val haveLeft: Boolean
         get() = left != null

@@ -7,12 +7,11 @@ import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.core.Status.Companion.OK
 import org.http4k.format.Jackson.auto
+import ray.eldath.offgrid.component.*
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
-import ray.eldath.offgrid.component.Argon2
-import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.component.BearerSecurity.bearerToken
-import ray.eldath.offgrid.component.UserStatus
 import ray.eldath.offgrid.component.UserStatus.*
+import ray.eldath.offgrid.util.ErrorCode
 import ray.eldath.offgrid.util.ErrorCodes
 import ray.eldath.offgrid.util.ErrorCodes.INVALID_EMAIL_ADDRESS
 import ray.eldath.offgrid.util.ErrorCodes.UNCONFIRMED_EMAIL
@@ -35,20 +34,12 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
         if (!EmailValidator.getInstance().isValid(email))
             throw INVALID_EMAIL_ADDRESS()
 
-        val either = UserStatus.fetchByEmail(email)
+        val either = runState(UserStatus.fetchByEmail(email), plainPassword)
         val inbound =
-            if (either.haveRight) {
-                val i = either.rightOrThrow
-                if (!Argon2.verify(i.authorization.hashedPassword, plainPassword))
-                    throw USER_NOT_FOUND()
-                else i
-            } else
-                when (either.leftOrThrow) {
-                    UNCONFIRMED -> throw UNCONFIRMED_EMAIL()
-                    APPLICATION_PENDING -> throw ErrorCodes.APPLICATION_PENDING()
-                    APPLICATION_REJECTED -> throw ErrorCodes.APPLICATION_REJECTED()
-                    else -> throw USER_NOT_FOUND()
-                }
+            if (either.haveRight)
+                either.rightOrThrow
+            else
+                throw either.leftOrThrow()
 
         val bearer = BearerSecurity.authorize(inbound)
         Response(OK).with(responseLens of LoginResponse(bearer, expireIn))
@@ -67,6 +58,24 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
     companion object {
         val requestLens = Body.auto<LoginRequest>().toLens()
         val responseLens = Body.auto<LoginResponse>().toLens()
+
+        fun runState(
+            either: Either<UserStatus, InboundUser>,
+            plainPassword: ByteArray
+        ): Either<ErrorCode, InboundUser> =
+
+            if (either.haveRight) {
+                val i = either.rightOrThrow
+                if (!Argon2.verify(i.authorization.hashedPassword, plainPassword))
+                    USER_NOT_FOUND.toLeft()
+                else i.toRight()
+            } else
+                when (either.leftOrThrow) {
+                    UNCONFIRMED -> UNCONFIRMED_EMAIL
+                    APPLICATION_PENDING -> ErrorCodes.APPLICATION_PENDING
+                    APPLICATION_REJECTED -> ErrorCodes.APPLICATION_REJECTED
+                    else -> USER_NOT_FOUND
+                }.toLeft()
     }
 }
 
