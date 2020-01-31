@@ -10,14 +10,11 @@ import org.http4k.format.Jackson.auto
 import ray.eldath.offgrid.component.*
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.BearerSecurity.bearerToken
-import ray.eldath.offgrid.component.UserStatus.*
-import ray.eldath.offgrid.util.ErrorCode
-import ray.eldath.offgrid.util.ErrorCodes
+import ray.eldath.offgrid.component.UserRegistrationStatus.*
+import ray.eldath.offgrid.util.*
 import ray.eldath.offgrid.util.ErrorCodes.INVALID_EMAIL_ADDRESS
 import ray.eldath.offgrid.util.ErrorCodes.UNCONFIRMED_EMAIL
 import ray.eldath.offgrid.util.ErrorCodes.USER_NOT_FOUND
-import ray.eldath.offgrid.util.RouteTag
-import ray.eldath.offgrid.util.allJson
 import java.util.*
 
 class Login(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
@@ -34,12 +31,13 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
         if (!EmailValidator.getInstance().isValid(email))
             throw INVALID_EMAIL_ADDRESS()
 
-        val either = runState(UserStatus.fetchByEmail(email), plainPassword)
+        val either = runState(UserRegistrationStatus.fetchByEmail(email), plainPassword)
         val inbound =
-            if (either.haveRight)
-                either.rightOrThrow
-            else
+            if (either.haveLeft)
                 throw either.leftOrThrow()
+            else
+                either.rightOrThrow.rightOrThrow
+
 
         val bearer = BearerSecurity.authorize(inbound)
         Response(OK).with(responseLens of LoginResponse(bearer, expireIn))
@@ -59,23 +57,23 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
         val requestLens = Body.auto<LoginRequest>().toLens()
         val responseLens = Body.auto<LoginResponse>().toLens()
 
-        fun runState(
-            either: Either<UserStatus, InboundUser>,
+        fun <L : UserRegistrationStatus, R : ApplicationOrInbound> runState(
+            either: Either<L, R>,
             plainPassword: ByteArray
-        ): Either<ErrorCode, InboundUser> =
-
-            if (either.haveRight) {
-                val i = either.rightOrThrow
-                if (!Argon2.verify(i.authorization.hashedPassword, plainPassword))
-                    USER_NOT_FOUND.toLeft()
-                else i.toRight()
-            } else
+        ): Either<ErrorCode, ApplicationOrInbound> =
+            (if (either.haveLeft)
                 when (either.leftOrThrow) {
                     UNCONFIRMED -> UNCONFIRMED_EMAIL
                     APPLICATION_PENDING -> ErrorCodes.APPLICATION_PENDING
                     APPLICATION_REJECTED -> ErrorCodes.APPLICATION_REJECTED
                     else -> USER_NOT_FOUND
-                }.toLeft()
+                }
+            else {
+                val i: InboundUser = either.rightOrThrow.rightOrThrow
+                if (!Argon2.verify(i.authorization.hashedPassword, plainPassword))
+                    USER_NOT_FOUND
+                else null
+            }) either either.right
     }
 }
 

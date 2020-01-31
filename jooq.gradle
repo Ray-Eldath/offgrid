@@ -47,6 +47,7 @@ jooq {
                 immutablePojos = true
                 pojosEqualsAndHashCode = true
                 fluentSetters = true
+                javaTimeTypes = true
             }
         }
     }

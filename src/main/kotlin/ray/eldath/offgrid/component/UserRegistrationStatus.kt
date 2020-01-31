@@ -8,10 +8,12 @@ import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
-import ray.eldath.offgrid.util.transaction
+import ray.eldath.offgrid.util.*
 import java.util.*
 
-enum class UserStatus(val code: Int) {
+typealias ApplicationOrInbound = Either<UserApplication, InboundUser>
+
+enum class UserRegistrationStatus(val code: Int) {
     @Deprecated("left side of either just remains unset to indicate successful result")
     AUTHORIZED(1),
     NOT_FOUND(2),
@@ -20,10 +22,10 @@ enum class UserStatus(val code: Int) {
     APPLICATION_REJECTED(11);
 
     companion object {
-        fun fetchByEmail(email: String): Either<UserStatus, InboundUser> {
+        fun fetchByEmail(email: String): Either<UserRegistrationStatus, ApplicationOrInbound> {
             val inbound = fetchInboundUser(email)
             if (inbound.isPresent)
-                return inbound.get().toRight()
+                return inbound.get().toRight().toRight()
             return transaction {
                 val ua = UserApplications.USER_APPLICATIONS
                 val applicationOptional = select()
@@ -35,13 +37,16 @@ enum class UserStatus(val code: Int) {
                 else {
                     val application = applicationOptional.get()
 
-                    if (application.isEmailConfirmed == false)
-                        UNCONFIRMED.toLeft()
-                    else {
-                        if (application.isApplicationPending)
-                            APPLICATION_PENDING.toLeft()
-                        else APPLICATION_REJECTED.toLeft()
-                    }
+                    val status =
+                        if (application.isEmailConfirmed == false)
+                            UNCONFIRMED
+                        else {
+                            if (application.isApplicationPending)
+                                APPLICATION_PENDING
+                            else APPLICATION_REJECTED
+                        }
+
+                    (status to (application.toLeft())).toEither()
                 }
             }
         }
@@ -77,22 +82,3 @@ enum class UserStatus(val code: Int) {
             }
     }
 }
-
-data class Either<out L, out R>(val left: L?, val right: R?) {
-
-    val leftOrThrow: L
-        get() = left ?: throw NullPointerException("left value of $this is unset")
-    val rightOrThrow: R
-        get() = right ?: throw NullPointerException("right value of $this is unset")
-
-    val haveLeft: Boolean
-        get() = left != null
-    val haveRight: Boolean
-        get() = right != null
-}
-
-fun <L> L.toLeft() = Either(this, null)
-fun <R> R.toRight() = Either(null, this)
-fun <L> Optional<L>.toLeft() = this.get().toLeft()
-fun <R> Optional<R>.toRight() = this.get().toRight()
-fun <L, R> Pair<L, R>.toEither() = Either(this.first, this.second)

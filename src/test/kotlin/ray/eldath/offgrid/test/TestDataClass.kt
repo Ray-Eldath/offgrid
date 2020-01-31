@@ -2,14 +2,26 @@ package ray.eldath.offgrid.test
 
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import ray.eldath.offgrid.component.ApplicationOrInbound
 import ray.eldath.offgrid.component.InboundUser
+import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
+import ray.eldath.offgrid.handler.Login
+import ray.eldath.offgrid.test.Context.application
+import ray.eldath.offgrid.test.Context.hashedPassword
+import ray.eldath.offgrid.test.Context.inbound
+import ray.eldath.offgrid.test.Context.password
+import ray.eldath.offgrid.test.Context.user
+import ray.eldath.offgrid.test.Context.wrongPassword
+import ray.eldath.offgrid.util.*
+import ray.eldath.offgrid.util.ErrorCodes.APPLICATION_PENDING
+import ray.eldath.offgrid.util.ErrorCodes.APPLICATION_REJECTED
+import ray.eldath.offgrid.util.ErrorCodes.UNCONFIRMED_EMAIL
+import ray.eldath.offgrid.util.ErrorCodes.USER_NOT_FOUND
 import ray.eldath.offgrid.util.ErrorCodes.permissionDenied
-import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.Permission.*
 import ray.eldath.offgrid.util.Permission.Companion.expand
-import ray.eldath.offgrid.util.UserRole
 import strikt.api.expectCatching
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
@@ -59,14 +71,8 @@ class TestDataClass {
 
     @Nested
     inner class TestInboundUser {
-        private val user =
-            ray.eldath.offgrid.generated.offgrid.tables.pojos.User(1, "Ray Eldath", "ray.eldath@aol.com")
-
         @Test
         fun `test failed requirePermission`() {
-            val auth = Authorization(1, "", UserRole.PlatformAdmin)
-            val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, true)))
-
             expectCatching { inbound.requirePermission(CreateUser) }.failed()
                 .isEqualTo(permissionDeniedException(CreateUser)).println()
 
@@ -79,7 +85,7 @@ class TestDataClass {
 
         @Test
         fun `test success requirePermission`() {
-            val auth = Authorization(1, "", UserRole.MetricsAdmin)
+            val auth = Authorization(1, hashedPassword, UserRole.MetricsAdmin)
             val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, false)))
 
             expectCatching { inbound.requirePermission(CreateUser, DeleteUser, User) }.succeeded().println()
@@ -88,5 +94,36 @@ class TestDataClass {
 
         private fun permissionDeniedException(vararg require: Permission) =
             permissionDenied(require.expand().toList())()
+    }
+
+    @Nested
+    inner class TestUserRegistrationStatus {
+
+        @Test
+        fun `test pure UserRegistrationStatus`() {
+            expectThat(Login.runState(UserRegistrationStatus.NOT_FOUND.toLeft(), password))
+                .isEqualTo(USER_NOT_FOUND.toLeft())
+
+            expectThat(Login.runState(null either inbound.toRight(), wrongPassword))
+                .isEqualTo(USER_NOT_FOUND either inbound.toRight())
+        }
+
+        @Test
+        fun `test with UserApplication`() {
+            expectStatus(application.toLeft(), UserRegistrationStatus.UNCONFIRMED, UNCONFIRMED_EMAIL)
+            expectStatus(application.toLeft(), UserRegistrationStatus.APPLICATION_PENDING, APPLICATION_PENDING)
+            expectStatus(application.toLeft(), UserRegistrationStatus.APPLICATION_REJECTED, APPLICATION_REJECTED)
+        }
+
+        @Test
+        fun `test success with InboundUser`() {
+            expectThat(Login.runState(null either inbound.toRight(), password))
+                .isEqualTo(null either inbound.toRight())
+        }
+
+        private fun expectStatus(context: ApplicationOrInbound, actual: UserRegistrationStatus, expect: ErrorCode) {
+            expectThat(Login.runState(actual either context, password))
+                .isEqualTo(expect either context)
+        }
     }
 }

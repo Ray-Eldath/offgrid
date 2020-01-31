@@ -2,7 +2,7 @@ package ray.eldath.offgrid.test
 
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.TestInstance.Lifecycle
-import ray.eldath.offgrid.component.UserStatus
+import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.core.Core.enableDebug
 import ray.eldath.offgrid.core.Core.jooqContext
 import ray.eldath.offgrid.generated.offgrid.tables.Authorizations.AUTHORIZATIONS
@@ -16,6 +16,7 @@ import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.isEqualTo
+import strikt.assertions.isNotNull
 import strikt.assertions.isNull
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -27,9 +28,6 @@ object TestDatabase {
         enableDebug
         jooqContext
     }
-
-    private const val hk =
-        "\$argon2i\$v=19\$m=65536,t=10,p=1\$sOTA4jpvIiEfrIl6qacjcA\$6BcaWsQNTPCHT1f0kRQeEm3NmT8yAN8UMJJs5oczD70" // 123
 
     @Test
     @Order(1) // lower means higher priority
@@ -46,7 +44,7 @@ object TestDatabase {
             val auth = newRecord(AUTHORIZATIONS).apply {
                 userId = executed
                 role = UserRole.Root
-                hashedPassword = hk
+                hashedPassword = Context.hashedPassword
             }
             auth.insert()
             println("inserted authId: ${auth.userId}")
@@ -73,13 +71,16 @@ object TestDatabase {
 
     @Test
     fun `select User join Authorization and ExtraPermission`() {
-        val (left, right) = UserStatus.fetchByEmail("alpha@beta.omega")
+        val (topLeft, topRight) = UserRegistrationStatus.fetchByEmail("alpha@beta.omega")
 
         expect {
-            expectThat(left).isNull()
+            expectThat(topLeft).isNull()
+            expectThat(topRight).isNotNull()
+            expectThat(topRight!!) {
+                expectThat(topRight.left).isNull()
+                expectThat(topRight.right).isNotNull()
 
-            expectThat(right) {
-                val (user, auth, list) = right!!
+                val (user, auth, list) = topRight.rightOrThrow
                 val authId = auth.userId
 
                 that(user.email).isEqualTo("alpha@beta.omega")
