@@ -37,6 +37,8 @@ object Core {
         allRoutes += Login(credentials, security)
         allRoutes += Logout(credentials, security)
         allRoutes += Register(credentials, security)
+        allRoutes += ConfirmEmail.ValidateUrlToken(credentials, security)
+        allRoutes += ConfirmEmail.SubmitUserApplication(credentials, security)
         //
         allRoutes += Test(credentials, security)
     }

@@ -23,7 +23,7 @@ enum class UserRegistrationStatus(val code: Int) {
         fun fetchByEmail(email: String): Either<UserRegistrationStatus, ApplicationOrInbound> {
             val inbound = fetchInboundUser(email)
             if (inbound.isPresent)
-                return inbound.get().toRight().toRight()
+                return null or inbound.toRight()
             return transaction {
                 val ua = UserApplications.USER_APPLICATIONS
                 val applicationOptional = select()

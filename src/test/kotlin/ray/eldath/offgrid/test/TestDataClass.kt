@@ -104,8 +104,8 @@ class TestDataClass {
             expectThat(Login.runState(UserRegistrationStatus.NOT_FOUND.toLeft(), password))
                 .isEqualTo(USER_NOT_FOUND.toLeft())
 
-            expectThat(Login.runState(null either inbound.toRight(), wrongPassword))
-                .isEqualTo(USER_NOT_FOUND either inbound.toRight())
+            expectThat(Login.runState(null or inbound.toRight(), wrongPassword))
+                .isEqualTo(USER_NOT_FOUND or inbound.toRight())
         }
 
         @Test
@@ -117,13 +117,13 @@ class TestDataClass {
 
         @Test
         fun `test success with InboundUser`() {
-            expectThat(Login.runState(null either inbound.toRight(), password))
-                .isEqualTo(null either inbound.toRight())
+            expectThat(Login.runState(null or inbound.toRight(), password))
+                .isEqualTo(null or inbound.toRight())
         }
 
         private fun expectStatus(context: ApplicationOrInbound, actual: UserRegistrationStatus, expect: ErrorCode) {
-            expectThat(Login.runState(actual either context, password))
-                .isEqualTo(expect either context)
+            expectThat(Login.runState(actual or context, password))
+                .isEqualTo(expect or context)
         }
     }
 }
