@@ -1,11 +1,11 @@
 package ray.eldath.offgrid.component
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.http4k.contract.RouteMetaDsl
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.string
 import ray.eldath.offgrid.util.ErrorCode
+import ray.eldath.offgrid.util.json
 
 data class ApiExceptionData(val code: Int, val message: String, val status: Status = Status.BAD_REQUEST)
 
@@ -29,8 +29,7 @@ object ApiExceptionHandler {
                 } catch (e: ApiException) {
                     val data = e.data
 //                    val json = Jackson.asJsonString(e)   | dont work, see http4k#361
-                    val json = jacksonObjectMapper().writeValueAsString(data)
-                    Response(data.status).with(Body.string(ContentType.APPLICATION_JSON).toLens() of json)
+                    Response(data.status).with(Body.string(ContentType.APPLICATION_JSON).toLens() of e.json())
                 }
             }
         })

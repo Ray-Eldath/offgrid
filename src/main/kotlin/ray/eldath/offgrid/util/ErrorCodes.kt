@@ -4,6 +4,8 @@ import org.http4k.core.Status
 import org.http4k.core.Status.Companion.BAD_REQUEST
 import org.http4k.core.Status.Companion.CONFLICT
 import org.http4k.core.Status.Companion.FORBIDDEN
+import org.http4k.core.Status.Companion.INTERNAL_SERVER_ERROR
+import org.http4k.core.Status.Companion.NOT_FOUND
 import org.http4k.core.Status.Companion.UNAUTHORIZED
 import ray.eldath.offgrid.component.ApiException
 
@@ -50,5 +52,14 @@ object ErrorCodes {
     // 4: not found
     val USER_NOT_FOUND = ErrorCode(401, "incorrect email or password", UNAUTHORIZED)
     val CONFIRM_TOKEN_NOT_FOUND =
-        ErrorCode(402, "given confirm token not found, try to request a new token.", Status.NOT_FOUND)
+        ErrorCode(402, "given confirm token not found, try to request a new token.", NOT_FOUND)
+
+    // 5: internal server error
+    fun sendEmailFailed(target: String, log: String, type: String = "address confirmation email") =
+        ErrorCode(
+            510,
+            "send $type to email address $target failed with log: \n" +
+                    if (log.isEmpty()) "<empty>" else log,
+            INTERNAL_SERVER_ERROR
+        )
 }

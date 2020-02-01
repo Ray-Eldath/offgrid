@@ -43,6 +43,7 @@ dependencies {
     implementation("com.github.ben-manes.caffeine:caffeine:2.8.1")
     implementation("commons-validator:commons-validator:1.6")
     implementation("org.codehaus.groovy:groovy:3.0.0-rc-3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3")
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("ch.qos.logback:logback-core:$logbackVersion")
@@ -65,7 +66,11 @@ dependencies {
 
 listOf(tasks.compileKotlin, tasks.compileTestKotlin).forEach { it.get().kotlinOptions.jvmTarget = "11" }
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+    useJUnitPlatform()
+
+    exclude("**/singleshot/**")
+}
 
 application { mainClassName = "ray.eldath.offgrid.core.Core" }
 
