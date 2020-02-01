@@ -15,4 +15,4 @@ fun RouteMetaDsl.allJson() {
     this.consumes += ContentType.APPLICATION_JSON
 }
 
-fun Throwable.json(): String = jacksonObjectMapper().writeValueAsString(this)
+fun Any.json(): String = jacksonObjectMapper().writeValueAsString(this)

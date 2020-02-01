@@ -11,7 +11,7 @@ import ray.eldath.offgrid.component.ApiException
 
 data class ErrorCode(val code: Int, val message: String, val status: Status) {
 
-    operator fun invoke() = ApiException(code, message, status)
+    operator fun invoke() = ApiException(code, message, status) // TODO: metric
 }
 
 object ErrorCodes {

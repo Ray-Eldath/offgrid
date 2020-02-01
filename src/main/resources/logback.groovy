@@ -43,4 +43,4 @@ statusListener(NopStatusListener)
 // logger("java.sql.Connection", DEBUG)
 // logger("java.sql.Statement", DEBUG)
 
-root(DEBUG, ["Console", "File_WARN", "File_DEBUG"])
+root(INFO, ["Console", "File_WARN", "File_DEBUG"])

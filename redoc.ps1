@@ -1,0 +1,1 @@
+redoc-cli serve http://localhost:8080/swagger.json -w -p 1234

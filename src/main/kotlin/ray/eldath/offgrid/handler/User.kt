@@ -145,14 +145,14 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
         }
 
         val ua = UserApplications.USER_APPLICATIONS
-        val cxt = CoroutineScope(Dispatchers.IO)
+        val ctx = CoroutineScope(Dispatchers.IO)
+        fun sendEmail(token: String) =
+            ctx.launch {
+                sendConfirmEmail(email, ConfirmEmail.ConfirmUrlToken.buildUrl(email, token))
+            }
 
         if (status == UNCONFIRMED) {
-            either.rightOrThrow.leftOrThrow.let {
-                cxt.launch {
-                    sendConfirmEmail(email, ConfirmEmail.ConfirmUrlToken.buildUrl(it.email, it.emailConfirmationToken))
-                }
-            }
+            either.rightOrThrow.leftOrThrow.let { sendEmail(it.emailConfirmationToken) }
 
             transaction {
                 update(ua)
@@ -162,9 +162,7 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
             }
         } else if (status == NOT_FOUND) {
             val token = ConfirmEmail.ConfirmUrlToken.generateToken()
-            cxt.launch {
-                sendConfirmEmail(email, token)
-            }
+            sendEmail(token)
 
             transaction {
                 val record = newRecord(ua).apply {
@@ -185,7 +183,7 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
             summary = "Register, only email address is needed"
             tags += RouteTag.User
             tags += RouteTag.Authorization
-            allJson()
+            consumes += ContentType.APPLICATION_JSON
 
             exception(ErrorCodes.APPLICATION_REJECTED, ErrorCodes.APPLICATION_PENDING)
             returning(OK to "confirm email has been sent, or resent successfully")
@@ -253,7 +251,6 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
                         .let {
                             logger.warn(it)
                             throw sendEmailFailed(email, it)()
-                            // TODO: metric
                         }
 
             } catch (e: ServerException) {
@@ -292,17 +289,17 @@ object ConfirmEmail {
 
         data class UserApplicationSubmission(val username: String, val password: String) {
             companion object {
-                const val MAX_USERNAME_LENGTH = 16
-                const val MAX_PASSWORD_LENGTH = 18
-                const val MIN_PASSWORD_LENGTH = 6
+                private const val MAX_USERNAME_LENGTH = 16
+                private const val MAX_PASSWORD_LENGTH = 18
+                private const val MIN_PASSWORD_LENGTH = 6
             }
 
-            init {
+            fun check() {
                 val uLength = username.length
                 val pLength = password.length
                 when {
                     uLength > MAX_USERNAME_LENGTH -> throw InvalidRegisterSubmission.USERNAME_TOO_LONG()
-                    pLength < MIN_PASSWORD_LENGTH -> throw InvalidRegisterSubmission.PASSWORD_TOO_SHORT()
+                    pLength <= MIN_PASSWORD_LENGTH -> throw InvalidRegisterSubmission.PASSWORD_TOO_SHORT()
                     pLength > MAX_PASSWORD_LENGTH -> throw InvalidRegisterSubmission.PASSWORD_TOO_LONG()
                 }
             }
@@ -312,6 +309,7 @@ object ConfirmEmail {
 
         private fun handler(inboundToken: String) = { req: Request ->
             val json = requestLens(req)
+            json.check()
             val plainPassword = json.password.toByteArray()
             val application = validateUrlToken(ConfirmUrlToken.parse(inboundToken))
 
