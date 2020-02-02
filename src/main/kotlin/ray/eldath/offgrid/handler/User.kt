@@ -38,8 +38,8 @@ import ray.eldath.offgrid.util.ErrorCodes.UNCONFIRMED_EMAIL
 import ray.eldath.offgrid.util.ErrorCodes.USER_ALREADY_REGISTERED
 import ray.eldath.offgrid.util.ErrorCodes.USER_NOT_FOUND
 import ray.eldath.offgrid.util.ErrorCodes.sendEmailFailed
+import java.time.Duration
 import java.time.LocalDateTime
-import java.time.temporal.ChronoUnit
 import java.util.*
 
 
@@ -193,7 +193,7 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
         private val logger = LoggerFactory.getLogger(Register::class.java)
         val requestLens = Body.auto<RegisterRequest>().toLens()
 
-        const val TOKEN_EXPIRY_HOURS = 2
+        val TOKEN_EXPIRY_DURATION: Duration = Duration.ofHours(2)
 
         private val aliyunClient by lazy {
             DefaultProfile.getProfile(
@@ -232,7 +232,7 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
                     
                     $confirmUrl
                     
-                    该链接 $TOKEN_EXPIRY_HOURS 小时内有效，请尽快完成注册确认。
+                    该链接 ${TOKEN_EXPIRY_DURATION.toHours()} 小时内有效，请尽快完成注册确认。
                     
                     Offgrid.
                     
@@ -279,7 +279,7 @@ object ConfirmEmail {
 
         if (application.emailConfirmationToken != urlToken.token)
             throw CONFIRM_TOKEN_NOT_FOUND()
-        else if (time.until(LocalDateTime.now(), ChronoUnit.DAYS) > Register.TOKEN_EXPIRY_HOURS)
+        else if (time.plus(Register.TOKEN_EXPIRY_DURATION).isBefore(LocalDateTime.now()))
             throw CONFIRM_TOKEN_EXPIRED()
         return application
     }

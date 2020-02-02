@@ -7,7 +7,7 @@ import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
-import java.time.LocalDateTime
+import java.sql.Timestamp
 
 object Context {
     val wrongPassword = "1234".toByteArray()
@@ -25,7 +25,7 @@ object Context {
             "alpha@beta.omega",
             true,
             "",
-            LocalDateTime.now(),
+            Timestamp(123), // TODO:
             hashedPassword,
             "Ray Eldath",
             true

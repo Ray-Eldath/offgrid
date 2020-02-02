@@ -109,8 +109,10 @@ object Core {
 
         file.bufferedReader().useLines { seq ->
             seq.map { it.split("=") }
-                .filter { it.size == 2 }
-                .forEach { System.setProperty("offgrid.env.${it[0]}", it[1]) }
+                .filter { it.size >= 2 }
+                .forEach {
+                    System.setProperty("offgrid.env.${it[0]}", it.subList(1, it.size).joinToString(""))
+                }
         }
     }
 
