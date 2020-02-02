@@ -50,6 +50,8 @@ object ErrorCodes {
 
 
     // 4: not found
+    fun commonNotFound(message: String = "given entity is not found") = ErrorCode(400, message, NOT_FOUND)
+
     val USER_NOT_FOUND = ErrorCode(401, "incorrect email or password", UNAUTHORIZED)
     val CONFIRM_TOKEN_NOT_FOUND =
         ErrorCode(402, "given confirm token not found, try to request a new token.", NOT_FOUND)

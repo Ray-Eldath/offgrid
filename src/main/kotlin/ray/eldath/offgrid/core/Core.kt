@@ -50,6 +50,9 @@ object Core {
         allRoutes += Register(credentials, security)
         allRoutes += ConfirmEmail.ValidateUrlToken(credentials, security)
         allRoutes += ConfirmEmail.SubmitUserApplication(credentials, security)
+
+        allRoutes += ApproveUserApplication(credentials, security)
+        allRoutes += RejectUserApplication(credentials, security)
         //
         allRoutes += Test(credentials, security)
     }

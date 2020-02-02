@@ -4,6 +4,7 @@ import org.http4k.contract.Tag
 
 object RouteTag {
     val User = Tag("user", "all staff relates to manipulate or request user.")
+    val UserApplication = Tag("user application", "related to manage user applications, may involved some permissions.")
     val Authorization = Tag("authorization", "sign-up, login, etc.")
     val Registration = Tag("registration", "anything consist of the registration procedure.")
 

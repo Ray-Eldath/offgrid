@@ -1,15 +1,8 @@
 package ray.eldath.offgrid.handler
 
-import com.aliyuncs.DefaultAcsClient
-import com.aliyuncs.dm.model.v20151123.SingleSendMailRequest
-import com.aliyuncs.exceptions.ClientException
-import com.aliyuncs.exceptions.ServerException
-import com.aliyuncs.http.MethodType
-import com.aliyuncs.profile.DefaultProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.apache.commons.validator.routines.EmailValidator
 import org.http4k.contract.ContractRoute
 import org.http4k.contract.RouteMetaDsl
@@ -21,7 +14,6 @@ import org.http4k.core.Status.Companion.OK
 import org.http4k.format.Jackson
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
-import org.slf4j.LoggerFactory
 import ray.eldath.offgrid.component.*
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.BearerSecurity.bearerToken
@@ -37,7 +29,6 @@ import ray.eldath.offgrid.util.ErrorCodes.InvalidRegisterSubmission
 import ray.eldath.offgrid.util.ErrorCodes.UNCONFIRMED_EMAIL
 import ray.eldath.offgrid.util.ErrorCodes.USER_ALREADY_REGISTERED
 import ray.eldath.offgrid.util.ErrorCodes.USER_NOT_FOUND
-import ray.eldath.offgrid.util.ErrorCodes.sendEmailFailed
 import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
@@ -190,42 +181,13 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
         } bindContract Method.POST to handler
 
     companion object {
-        private val logger = LoggerFactory.getLogger(Register::class.java)
         val requestLens = Body.auto<RegisterRequest>().toLens()
 
         val TOKEN_EXPIRY_DURATION: Duration = Duration.ofHours(2)
 
-        private val aliyunClient by lazy {
-            DefaultProfile.getProfile(
-                "cn-hangzhou",
-                getEnv("OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID"),
-                getEnv("OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET") // require permission: AliyunDirectMailFullAccess...... :-(
-            ).let {
-                DefaultAcsClient(it)
-            }
-        }
-
-        suspend fun sendConfirmEmail(email: String, confirmUrl: String) = withContext(Dispatchers.IO) {
-
-            fun warn(e: ClientException, type: String = "ClientException"): Unit =
-                "AliyunDirectMail: $type(errCode: ${e.errCode}) thrown when sendConfirmEmail to email address $email".let {
-                    logger.warn(it, e)
-
-                    throw sendEmailFailed(email, it + "\n $type: ${e.json()}")()
-                }
-
-            try {
-                val resp = SingleSendMailRequest().apply {
-                    accountName = "no-reply@qvq.ink"
-                    fromAlias = "no-reply"
-                    addressType = 1
-                    tagName = "emailconfirm"
-                    replyToAddress = true
-                    sysMethod = MethodType.POST
-                    clickTrace = "0";
-                    toAddress = email
-                    subject = "[Offgrid] 注册确认：验证您的邮箱"
-                    textBody = """
+        suspend fun sendConfirmEmail(email: String, confirmUrl: String) =
+            DirectEmailUtil.sendEmail("[Offgrid] 注册确认：验证您的邮箱", "emailconfirm", email) {
+                """
                     您好，
                     
                     感谢您注册 Offgrid！请访问下列链接以验证您的邮箱：
@@ -242,23 +204,10 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
                     
                     您收到这封邮件是因为有人使用本邮箱注册了 Offgrid。若这一注册与您无关，请忽略此邮件。
                     
+                    
                     此邮件由 Offgrid 系统自动发出，请勿直接回复。若有更多问题请联系您组织的 Offgrid 管理员。
                 """.trimIndent()
-                }.let { aliyunClient.doAction(it) }
-                if (!resp.isSuccess)
-                    ("AliyunDirectMail: unsuccessful send attempt to email address $email with response: \n" +
-                            "(${resp.status}) \n ${resp.httpContentString}")
-                        .let {
-                            logger.warn(it)
-                            throw sendEmailFailed(email, it)()
-                        }
-
-            } catch (e: ServerException) {
-                warn(e, "ServerException")
-            } catch (e: ClientException) {
-                warn(e)
             }
-        }
     }
 }
 

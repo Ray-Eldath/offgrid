@@ -2,7 +2,11 @@ package ray.eldath.offgrid.util
 
 import ray.eldath.offgrid.util.Permission.Companion.expand
 
-enum class Permission(val id: String, vararg val childrenPermissions: Permission? = arrayOf()) {
+enum class Permission(
+    val id: String,
+    vararg val childrenPermissions: Permission? = arrayOf(),
+    val displayName: String = this::class.simpleName!!
+) {
     ListUser("U_L"),
     CreateUser("U_C"),
     ModifyUserData("U_DM"),
@@ -59,6 +63,9 @@ enum class Permission(val id: String, vararg val childrenPermissions: Permission
                 .toMutableList().also { it.add(this) }
 
         fun Array<out Permission>.expand(): List<Permission> =
+            this.flatMap { it.expand() }
+
+        fun List<Permission>.expand(): List<Permission> =
             this.flatMap { it.expand() }
     }
 }
