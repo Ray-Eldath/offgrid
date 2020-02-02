@@ -161,8 +161,16 @@ class RejectUserApplication(credentials: Credentials, optionalSecurity: Security
     ContractHandler(credentials, optionalSecurity) {
 
     private fun handler(id: String, useless: String): HttpHandler = { req ->
-        println(id)
-        println(useless)
+        credentials(req).requirePermission(Permission.RejectUserApplication)
+
+        val idInt = id.toIntOrNull() ?: throw commonBadRequest("invalid id: should be an int")()
+        transaction {
+            val ua = UserApplications.USER_APPLICATIONS
+
+            update(ua)
+                .set(ua.IS_APPLICATION_PENDING, false)
+                .where(ua.ID.eq(idInt))
+        }
         Response(Status.OK)
     }
 
