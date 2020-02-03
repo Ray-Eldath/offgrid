@@ -30,7 +30,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
     private val emailLens = Query.string().optional("email", "Fuzzy filtered by email")
     private val usernameLens = Query.string().optional("username", "Fuzzy filtered by username")
     private val roleLens = Query.int().optional("role", "Filter by user role")
-    private val permissionsLens = Query.string().optional("permissions", "Filter by permission(s)")
+    private val permissionLens = Query.string().optional("permission", "Filter by permission id")
 
     private val handler: HttpHandler = { req ->
         credentials(req).requirePermission(Permission.ListUser)
@@ -42,59 +42,46 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
         val email = emailLens(req)
         val username = usernameLens(req)
         val role = roleLens(req)?.let { UserRole.fromId(it) }
-        val permissions =
-            permissionsLens(req)
-                ?.split(",")
-                ?.mapNotNull { Permission.fromId(it) }
-                ?.ifEmpty { null }
 
-        val permissionsRoles = permissions?.flatMap { UserRole.fromPermission(it) }?.toHashSet()
+        val permissionPlain = permissionLens(req)
+        val permission = permissionPlain?.let { Permission.fromId(it) }
+        val permissionRoles = permission?.let { UserRole.fromPermission(it) }?.toMutableList()
 
         transaction<MutableMap<User, MutableList<Authorization>>?> {
             val u = Users.USERS
             val a = Authorizations.AUTHORIZATIONS
             val ep = ExtraPermissions.EXTRA_PERMISSIONS
 
-            select()
+            selectDistinct(u.fields().toMutableList().also { it.addAll(a.fields()) })
                 .from(u)
-                .innerJoin(a).onKey()
+                .innerJoin(a).on(u.ID.eq(a.USER_ID))
+                .leftJoin(ep).on(ep.AUTHORIZATION_ID.eq(a.USER_ID))
+                .where("true")
                 .apply {
-                    if (!allNull(id, email, username, role, permissions)) {
+                    if (!allNull(id, email, username, role, permission)) {
                         if (id != null)
-                            where(u.ID.eq(id))
+                            and(u.ID.eq(id))
                         if (email != null)
-                            where(u.EMAIL.likeIgnoreCase("%$email%"))
+                            and(u.EMAIL.likeIgnoreCase("%$email%"))
                         if (username != null)
-                            where(u.USERNAME.likeIgnoreCase("%$username%"))
+                            and(u.USERNAME.likeIgnoreCase("%$username%"))
                         if (role != null) {
-                            if (permissionsRoles == null)
-                                where(a.ROLE.eq(role))
+                            if (permissionRoles == null)
+                                and(a.ROLE.eq(role))
                             else
-                                where(a.ROLE.`in`(permissionsRoles.also { it.add(role) }))
+                                and(a.ROLE.`in`(permissionRoles.also { it.add(role) }))
                         }
-                        if (permissions != null) {
-                            whereExists(
-                                select()
-                                    .from(ep)
-                                    .where(
-                                        ep.AUTHORIZATION_ID.eq(a.USER_ID)
-                                            .and(
-                                                ep.PERMISSION_ID.`in`(permissions)
-                                                    .and(ep.IS_SHIELD.isFalse)
-                                            )
+                        if (permission != null) {
+                            and(
+                                a.ROLE.`in`(permissionRoles).and(
+                                    ep.PERMISSION_ID.isNull.orNot(
+                                        ep.PERMISSION_ID.eq(permission).and(ep.IS_SHIELD.isTrue)
                                     )
-                            )
-
-                            whereNotExists(
-                                select()
-                                    .from(ep)
-                                    .where(
-                                        ep.AUTHORIZATION_ID.eq(a.USER_ID)
-                                            .and(
-                                                ep.PERMISSION_ID.`in`(permissions)
-                                                    .and(ep.IS_SHIELD.isTrue)
-                                            )
+                                ).or(
+                                    ep.PERMISSION_ID.`in`(Permission.fromId(permission.rootId), permission).and(
+                                        ep.IS_SHIELD.isFalse
                                     )
+                                )
                             )
                         }
                     }
@@ -120,8 +107,9 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
         "/users" meta {
             summary = "Query users, ordered by id"
             description = "provide pagination and filter parameters for matched users, but none of them is required."
+            security = optionalSecurity
 
-            queries += listOf(pageLens, pageSizeLens, idLens, emailLens, usernameLens, roleLens, permissionsLens)
+            queries += listOf(pageLens, pageSizeLens, idLens, emailLens, usernameLens, roleLens, permissionLens)
 
             produces += ContentType.APPLICATION_JSON
             returning(

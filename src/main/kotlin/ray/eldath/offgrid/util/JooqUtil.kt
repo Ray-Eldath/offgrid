@@ -15,7 +15,7 @@ fun <T> transaction(context: DSLContext = Core.jooqContext, block: DSLContext.()
 
 class PermissionConverter : Converter<String, Permission> {
 
-    override fun from(databaseObject: String): Permission = Permission.fromId(databaseObject)
+    override fun from(databaseObject: String): Permission = Permission.fromId(databaseObject)!!
     override fun to(userObject: Permission): String = userObject.id
 
     override fun fromType(): Class<String> = String::class.java

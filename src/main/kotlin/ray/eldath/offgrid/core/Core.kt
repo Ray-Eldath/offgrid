@@ -121,7 +121,7 @@ object Core {
         }
     }
 
-    fun getEnv(key: String) =
+    fun getEnv(key: String): String =
         if (System.getenv(key) != null)
             System.getenv(key)
         else

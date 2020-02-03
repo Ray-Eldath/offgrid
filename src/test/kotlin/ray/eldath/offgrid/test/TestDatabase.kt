@@ -3,6 +3,7 @@ package ray.eldath.offgrid.test
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.TestInstance.Lifecycle
 import ray.eldath.offgrid.component.UserRegistrationStatus
+import ray.eldath.offgrid.core.Core
 import ray.eldath.offgrid.core.Core.enableDebug
 import ray.eldath.offgrid.core.Core.jooqContext
 import ray.eldath.offgrid.generated.offgrid.tables.Authorizations.AUTHORIZATIONS
@@ -27,6 +28,7 @@ object TestDatabase {
     fun `prepare database`() {
         enableDebug
         jooqContext
+        Core.loadEnv()
     }
 
     @Test

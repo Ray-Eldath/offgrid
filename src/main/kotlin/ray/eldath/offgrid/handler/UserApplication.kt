@@ -93,7 +93,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
                     application.username,
                     LocalDateTime.now(), role, json.extraPermissions
                         .filterNot { it.isShield }
-                        .map { Permission.fromId(it.id) }
+                        .mapNotNull { Permission.fromId(it.id) }
                 )
             }
         }
@@ -104,6 +104,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
     override fun compile(): ContractRoute =
         "/application" / Path.int().of("id") / "approve" meta {
             summary = "approve the registration application"
+            security = optionalSecurity
             tags += RouteTag.UserApplication
             tags += RouteTag.Secure
 
@@ -131,7 +132,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
                     尊敬的 $username：
                     
                     欢迎使用 Offgrid！您的注册申请已于 ${time.format(RFC_1123_DATE_TIME)} 被您组织的管理员正式批准。
-                    该管理员为您分配了身份 ${role.displayName}$displayPermissions。关于这些权限的具体含义，请参阅用户手册，或咨询您组织的 Offgrid 管理员。
+                    该管理员为您分配了身份 ${role.name}$displayPermissions。关于这些权限的具体含义，请参阅用户手册，或咨询您组织的 Offgrid 管理员。
                     
                     您现在可以使用该邮箱和您预先设定的密码登录 Offgrid 了。祝使用愉快！
                     
@@ -184,6 +185,7 @@ class RejectUserApplication(credentials: Credentials, optionalSecurity: Security
     override fun compile(): ContractRoute =
         "/application" / Path.int().of("id") / "reject" meta {
             summary = "reject the registration application as well as any further applications"
+            security = optionalSecurity
             tags += RouteTag.UserApplication
             tags += RouteTag.Secure
 

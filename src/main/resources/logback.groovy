@@ -28,14 +28,14 @@ appender("File_WARN", RollingFileAppender) {
     encoder(PatternLayoutEncoder) { pattern = FILE_PATTERN }
 }
 
-appender("File_DEBUG", RollingFileAppender) {
+appender("File_ERROR", RollingFileAppender) {
     rollingPolicy(SizeAndTimeBasedRollingPolicy) {
-        fileNamePattern = "log/debug.%d{yyyy-MM-dd}.%i.log"
-        maxFileSize = "10MB"
+        fileNamePattern = "log/error.%d{yyyy-MM-dd}.%i.log"
+        maxFileSize = "5MB"
         totalSizeCap = "2GB"
     }
 
-    filter(ThresholdFilter) { level = DEBUG }
+    filter(ThresholdFilter) { level = ERROR }
     encoder(PatternLayoutEncoder) { pattern = FILE_PATTERN }
 }
 
@@ -43,4 +43,4 @@ statusListener(NopStatusListener)
 // logger("java.sql.Connection", DEBUG)
 // logger("java.sql.Statement", DEBUG)
 
-root(INFO, ["Console", "File_WARN", "File_DEBUG"])
+root(INFO, ["Console", "File_WARN", "File_ERROR"])

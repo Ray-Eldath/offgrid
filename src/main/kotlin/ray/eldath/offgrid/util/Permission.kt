@@ -2,22 +2,26 @@ package ray.eldath.offgrid.util
 
 import ray.eldath.offgrid.util.Permission.Companion.expand
 
-enum class Permission(val id: String, vararg val childrenPermissions: Permission? = arrayOf()) {
-    ListUser("U_L"),
-    CreateUser("U_C"),
-    ModifyUserData("U_DM"),
-    ModifyUserPermission("U_PM"),
-    DeleteUser("U_D"),
+enum class Permission(
+    val id: String,
+    vararg val childrenPermissions: Permission? = arrayOf(),
+    val rootId: String = id
+) {
+    ListUser("U_L", rootId = "U"),
+    CreateUser("U_C", rootId = "U"),
+    ModifyUserData("U_DM", rootId = "U"),
+    ModifyUserPermission("U_PM", rootId = "U"),
+    DeleteUser("U_D", rootId = "U"),
     User("U", ListUser, CreateUser, ModifyUserData, ModifyUserPermission, DeleteUser),
 
-    ApproveUserApplication("UA_A"),
-    RejectUserApplication("UA_R"),
+    ApproveUserApplication("UA_A", rootId = "UA"),
+    RejectUserApplication("UA_R", rootId = "UA"),
     UserApplication("UA", ApproveUserApplication, RejectUserApplication),
 
-    ListProviderRegistry("PR_L"),
-    CreateProviderRegistry("PR_C"),
-    UpdateProviderRegistry("PR_U"),
-    DeleteProviderRegistry("PR_D"),
+    ListProviderRegistry("PR_L", rootId = "PR"),
+    CreateProviderRegistry("PR_C", rootId = "PR"),
+    UpdateProviderRegistry("PR_U", rootId = "PR"),
+    DeleteProviderRegistry("PR_D", rootId = "PR"),
     ProviderRegistry(
         "PR",
         ListProviderRegistry,
@@ -26,23 +30,23 @@ enum class Permission(val id: String, vararg val childrenPermissions: Permission
         DeleteProviderRegistry
     ),
 
-    ListModelRegistry("MR_L"),
-    CreateModelRegistry("MR_C"),
-    UpdateModelRegistry("MR_U"),
-    DeleteModelRegistry("MR_D"),
+    ListModelRegistry("MR_L", rootId = "MR"),
+    CreateModelRegistry("MR_C", rootId = "MR"),
+    UpdateModelRegistry("MR_U", rootId = "MR"),
+    DeleteModelRegistry("MR_D", rootId = "MR"),
     ModelRegistry("MR", ListModelRegistry, CreateModelRegistry, UpdateModelRegistry, DeleteModelRegistry),
 
     SelfComputationResult("CRs"),
-    AllComputationResult("CRa", SelfComputationResult),
-    ComputationResult("CR", AllComputationResult),
+    AllComputationResult("CRa", SelfComputationResult, rootId = "CR"),
+    ComputationResult("CR", AllComputationResult, rootId = "CR"),
 
     Graph("G"), // implies forbidden model & provider, etc.
 
-    SelfProviderMetrics("M_Ps"),
-    AllProviderMetrics("M_Pa", SelfProviderMetrics),
-    SelfModelMetrics("M_Ms"),
-    AllModelMetrics("M_Ma", SelfModelMetrics),
-    SystemMetrics("M_S"),
+    SelfProviderMetrics("M_Ps", rootId = "M"),
+    AllProviderMetrics("M_Pa", SelfProviderMetrics, rootId = "M"),
+    SelfModelMetrics("M_Ms", rootId = "M"),
+    AllModelMetrics("M_Ma", SelfModelMetrics, rootId = "M"),
+    SystemMetrics("M_S", rootId = "M"),
     Metrics("M", SystemMetrics, AllModelMetrics, AllProviderMetrics),
 
     Root("ROOT", User, UserApplication, ProviderRegistry, ModelRegistry, ComputationResult, Graph, Metrics);
