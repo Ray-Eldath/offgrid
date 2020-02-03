@@ -53,6 +53,8 @@ object Core {
 
         allRoutes += ApproveUserApplication(credentials, security)
         allRoutes += RejectUserApplication(credentials, security)
+
+        allRoutes += ListUsers(credentials, security)
         //
         allRoutes += Test(credentials, security)
     }

@@ -28,6 +28,7 @@ object DirectEmailUtil {
         subject: String,
         aliyunTag: String,
         toAddress: String,
+        fromAlias: String = "[no reply] Offgrid User Center",
         textBody: () -> String
     ) = withContext(IO) {
         fun warn(e: ClientException, type: String = "ClientException"): Unit =
@@ -41,12 +42,12 @@ object DirectEmailUtil {
         try {
             val resp = SingleSendMailRequest().apply {
                 accountName = "no-reply@qvq.ink"
-                fromAlias = "[no-reply] Offgrid System"
                 addressType = 1
                 tagName = aliyunTag
                 replyToAddress = true
                 sysMethod = MethodType.POST
-                clickTrace = "0";
+                clickTrace = "0"
+                this.fromAlias = fromAlias
                 this.toAddress = toAddress
                 this.subject = subject
                 this.textBody = textBody()

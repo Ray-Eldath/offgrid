@@ -10,19 +10,17 @@ import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
+import org.http4k.lens.int
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
 import ray.eldath.offgrid.generated.offgrid.tables.records.AuthorizationsRecord
 import ray.eldath.offgrid.generated.offgrid.tables.records.ExtraPermissionsRecord
 import ray.eldath.offgrid.generated.offgrid.tables.records.UsersRecord
+import ray.eldath.offgrid.util.*
 import ray.eldath.offgrid.util.DirectEmailUtil.sendEmail
 import ray.eldath.offgrid.util.ErrorCodes.commonBadRequest
 import ray.eldath.offgrid.util.ErrorCodes.commonNotFound
-import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.Permission.Companion.expand
-import ray.eldath.offgrid.util.RouteTag
-import ray.eldath.offgrid.util.UserRole
-import ray.eldath.offgrid.util.transaction
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
 
@@ -32,7 +30,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
     data class InboundPermission(val id: String, val isShield: Boolean) {
         init {
             if (id !in allPermissionsId)
-                throw commonBadRequest("invalid extraPermissionsId $id, note that id is required and displayName is illegal")()
+                throw commonBadRequest("invalid extraPermissionsId $id, note that id is required and name is illegal")()
         }
     }
 
@@ -43,14 +41,11 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
         }
     }
 
-    private fun handler(id: String, useless: String): HttpHandler = { req ->
+    private fun handler(id: Int, useless: String): HttpHandler = { req ->
         credentials(req).requirePermission(Permission.ApproveUserApplication)
 
         val json = requestLens(req)
         val role = UserRole.fromId(json.roleId)
-
-        val idInt = id.toIntOrNull() ?: throw commonBadRequest("invalid id: should be an int")()
-        val ctx = CoroutineScope(Dispatchers.IO)
 
         transaction {
             val ua = UserApplications.USER_APPLICATIONS
@@ -58,7 +53,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
             val application =
                 select()
                     .from(ua)
-                    .where(ua.ID.eq(idInt))
+                    .where(ua.ID.eq(id))
                     .fetchOptional { it.into(ua).into(UserApplication::class.java) }
                     .run {
                         if (isEmpty)
@@ -107,7 +102,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
     }
 
     override fun compile(): ContractRoute =
-        "/application" / Path.of("id") / "approve" meta {
+        "/application" / Path.int().of("id") / "approve" meta {
             summary = "approve the registration application"
             tags += RouteTag.UserApplication
             tags += RouteTag.Secure
@@ -117,6 +112,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
         } bindContract Method.GET to ::handler
 
     companion object {
+        private val ctx = CoroutineScope(Dispatchers.IO)
         private val requestLens = Body.auto<ApproveRequest>().toLens()
         private val allPermissionsId = Permission.values().map { p -> p.id }
 
@@ -160,22 +156,33 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
 class RejectUserApplication(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
 
-    private fun handler(id: String, useless: String): HttpHandler = { req ->
+    private fun handler(id: Int, useless: String): HttpHandler = { req ->
         credentials(req).requirePermission(Permission.RejectUserApplication)
 
-        val idInt = id.toIntOrNull() ?: throw commonBadRequest("invalid id: should be an int")()
         transaction {
             val ua = UserApplications.USER_APPLICATIONS
 
-            update(ua)
-                .set(ua.IS_APPLICATION_PENDING, false)
-                .where(ua.ID.eq(idInt))
-        }
+            select()
+                .from(ua)
+                .where(ua.ID.eq(id))
+                .fetchOptional { it.into(ua).into(UserApplication::class.java) }
+                .let {
+                    if (it.isEmpty)
+                        throw commonNotFound()()
+                    else it.get()
+                }
+                .sidecar {
+                    update(ua)
+                        .set(ua.IS_APPLICATION_PENDING, false)
+                        .where(ua.ID.eq(it.id))
+                }
+        }.let { ctx.launch { sendRejectEmail(it.email, it.username, LocalDateTime.now()) } }
+
         Response(Status.OK)
     }
 
     override fun compile(): ContractRoute =
-        "/application" / Path.of("id") / "reject" meta {
+        "/application" / Path.int().of("id") / "reject" meta {
             summary = "reject the registration application as well as any further applications"
             tags += RouteTag.UserApplication
             tags += RouteTag.Secure
@@ -184,6 +191,8 @@ class RejectUserApplication(credentials: Credentials, optionalSecurity: Security
         } bindContract Method.GET to ::handler
 
     companion object {
+        private val ctx = CoroutineScope(Dispatchers.IO)
+
         suspend fun sendRejectEmail(email: String, username: String, time: LocalDateTime) {
             sendEmail("[Offgrid] 注册失败：您的申请已被拒绝", "applicationrejected", email) {
                 """
