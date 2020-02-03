@@ -64,14 +64,15 @@ object ApiExceptionHandler {
     }
 
     fun RouteMetaDsl.exception(status: Status, code: Int, message: String) {
-        this.returning(status, exception to ApiExceptionData(code, message, status))
-    }
-
-    fun RouteMetaDsl.exception(code: ErrorCode) {
-        this.exception(code.status, code.code, code.message)
+        returning(
+            status,
+            exception to ApiExceptionData(code, message, status),
+            description = code.toString(),
+            definitionId = code.toString()
+        )
     }
 
     fun RouteMetaDsl.exception(vararg code: ErrorCode) {
-        code.forEach { exception(it) }
+        code.forEach { exception(it.status, it.code, it.message) }
     }
 }

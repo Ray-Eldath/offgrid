@@ -102,11 +102,11 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
     }
 
     override fun compile(): ContractRoute =
-        "/application" / Path.int().of("id") / "approve" meta {
-            summary = "approve the registration application"
+        "/application" / Path.int().of("id", "id of the application") / "approve" meta {
+            summary = "Approve the registration application"
+            description = "An email will be sent to notify the user."
             security = optionalSecurity
             tags += RouteTag.UserApplication
-            tags += RouteTag.Secure
 
             consumes += ContentType.APPLICATION_JSON
             returning(Status.OK to "given application has been deleted, and the user properly is created")
@@ -183,11 +183,13 @@ class RejectUserApplication(credentials: Credentials, optionalSecurity: Security
     }
 
     override fun compile(): ContractRoute =
-        "/application" / Path.int().of("id") / "reject" meta {
-            summary = "reject the registration application as well as any further applications"
+        "/application" / Path.int().of("id", "id of the application") / "reject" meta {
+            summary = "Reject the registration application"
+            description =
+                "Given application as well as any further applications linked with this email will all be rejected, " +
+                        "an email will be sent to notify the user as well."
             security = optionalSecurity
             tags += RouteTag.UserApplication
-            tags += RouteTag.Secure
 
             returning(Status.OK to "given application has been marked as rejected")
         } bindContract Method.GET to ::handler

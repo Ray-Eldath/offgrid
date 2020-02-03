@@ -1,5 +1,6 @@
 package ray.eldath.offgrid.test.handler
 
+import org.http4k.core.HttpMessage
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.with
@@ -24,6 +25,55 @@ import java.net.URLEncoder
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class TestUsers {
+    @Nested
+    inner class TestListUsers {
+        private val listUsers = ListUsers(credentials, security).compile()
+        private val resp = { message: HttpMessage ->
+            ListUsers.responseLens(message).result.also { println(it) }.map { it.username }.expect()
+        }
+
+        @Test
+        fun `list by username fuzzily`() {
+            resp(listUsers(request("username" to "ww")))
+                .containsExactlyInAnyOrder("www")
+        }
+
+        @Test
+        fun `list by email fuzzily`() {
+            resp(listUsers(request("email" to "alpha.com")))
+                .containsExactlyInAnyOrder("Ray Eldath", "bar foo")
+        }
+
+        @Test
+        fun `list by email fuzzily and role`() {
+            resp(listUsers(request("email" to "alpha.com", "role" to UserRole.MetricsAdmin.id.toString())))
+                .containsExactlyInAnyOrder("bar foo")
+        }
+
+        @Test
+        fun `list by permission`() {
+            resp(listUsers(request("permission" to Permission.RejectUserApplication.id)))
+                .containsExactlyInAnyOrder("Ray Eldath", "bar foo")
+
+            resp(listUsers(request("permission" to Permission.AllProviderMetrics.id)))
+                .containsExactlyInAnyOrder("Ray Eldath", "foo bar", "bar foo")
+
+            resp(listUsers(request("permission" to Permission.User.id)))
+                .containsExactlyInAnyOrder("Ray Eldath", "www")
+        }
+
+        private fun request(vararg queries: Pair<String, String>) =
+            queries.joinToString("&") { (key, value) ->
+                URLEncoder.encode(value, Charsets.UTF_8).let { "$key=$it" }
+            }.let { Request(Method.GET, "/users" + if (queries.isNotEmpty()) "?$it" else "").auth() }
+    }
+
+    @Test
+    @Order(2)
+    fun `login by root`() {
+        rootBearer
+    }
+
     private val usernameEmail = mapOf(
         "Ray Eldath" to "omega@alpha.com",
         "foo bar" to "alpha@omega.com",
@@ -45,59 +95,6 @@ class TestUsers {
                     .with(Login.requestLens of Login.LoginRequest("omega@alpha.com", "123"))
             )
         ).bearer
-    }
-
-    @Nested
-    inner class TestListUsers {
-        private val listUsers = ListUsers(credentials, security).compile()
-        private val resp = ListUsers.responseLens
-
-        @Test
-        fun `list by username fuzzily`() {
-            resp(listUsers(request("username" to "ww")))
-                .result.also { println(it) }.map { it.username }.expect()
-                .containsExactlyInAnyOrder("www")
-        }
-
-        @Test
-        fun `list by email fuzzily`() {
-            resp(listUsers(request("email" to "alpha.com")))
-                .result.also { println(it) }.map { it.username }.expect()
-                .containsExactlyInAnyOrder("Ray Eldath", "bar foo")
-        }
-
-        @Test
-        fun `list by email fuzzily and role`() {
-            resp(listUsers(request("email" to "alpha.com", "role" to UserRole.MetricsAdmin.id.toString())))
-                .result.also { println(it) }.map { it.username }.expect()
-                .containsExactlyInAnyOrder("bar foo")
-        }
-
-        @Test
-        fun `list by permission`() {
-            resp(listUsers(request("permission" to Permission.RejectUserApplication.id)))
-                .result.also { println(it) }.map { it.username }.expect()
-                .containsExactlyInAnyOrder("Ray Eldath", "bar foo")
-
-            resp(listUsers(request("permission" to Permission.AllProviderMetrics.id)))
-                .result.also { println(it) }.map { it.username }.expect()
-                .containsExactlyInAnyOrder("Ray Eldath", "foo bar", "bar foo")
-
-            resp(listUsers(request("permission" to Permission.User.id)))
-                .result.also { println(it) }.map { it.username }.expect()
-                .containsExactlyInAnyOrder("Ray Eldath", "www")
-        }
-
-        private fun request(vararg queries: Pair<String, String>) =
-            queries.joinToString("&") { (key, value) ->
-                URLEncoder.encode(value, Charsets.UTF_8).let { "$key=$it" }
-            }.let { Request(Method.GET, "/users" + if (queries.isNotEmpty()) "?$it" else "").auth() }
-    }
-
-    @Test
-    @Order(2)
-    fun `login by root`() {
-        rootBearer
     }
 
     @Test

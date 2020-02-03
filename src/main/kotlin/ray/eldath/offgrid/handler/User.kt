@@ -1,5 +1,7 @@
 package ray.eldath.offgrid.handler
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategy
+import com.fasterxml.jackson.databind.annotation.JsonNaming
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -36,13 +38,15 @@ import java.util.*
 
 class Login(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
     data class LoginRequest(val email: String, val password: String) : EmailRequest(email)
+
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class LoginResponse(val bearer: String, val expireIn: Long)
 
     private val expireIn = (BearerSecurity.EXPIRY_MINUTES * 60).toLong()
 
     private val handler: HttpHandler = { req: Request ->
         val json = requestLens(req)
-        val email = json.emailAddress
+        val email = json.email
         val plainPassword = json.password.toByteArray()
 
         if (!EmailValidator.getInstance().isValid(email))
@@ -62,11 +66,12 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
 
     override fun compile(): ContractRoute =
         "/login" meta {
-            summary = "Login, use Bearer Authorization"
+            summary = "Login"
+            description = "Use Bearer authorization."
             tags += RouteTag.Authorization
             allJson()
 
-            receiving(requestLens)
+            receiving(requestLens to LoginRequest("alpha.beta@omega.com", "mypassword"))
             returning(OK, responseLens to LoginResponse(UUID.randomUUID().toString(), expireIn))
             exception(
                 INVALID_EMAIL_ADDRESS,
@@ -112,7 +117,6 @@ class Logout(credentials: Credentials, optionalSecurity: Security) : ContractHan
         "/logout" meta {
             summary = "Logout"
             tags += RouteTag.Authorization
-            tags += RouteTag.Secure
             security = optionalSecurity
             allJson()
 
@@ -171,12 +175,13 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
 
     override fun compile(): ContractRoute =
         "/register" meta {
-            summary = "Register, only email address is needed"
-            tags += RouteTag.User
-            tags += RouteTag.Authorization
+            summary = "Register"
+            description = "Note that only email address is needed."
+            tags += RouteTag.Registration
             consumes += ContentType.APPLICATION_JSON
 
             exception(ErrorCodes.APPLICATION_REJECTED, ErrorCodes.APPLICATION_PENDING)
+            receiving(requestLens to RegisterRequest("alpha.beta@omega.com"))
             returning(OK to "confirm email has been sent, or resent successfully")
         } bindContract Method.POST to handler
 
@@ -278,14 +283,15 @@ object ConfirmEmail {
 
         override fun compile(): ContractRoute =
             "/confirm" / inboundTokenPath meta {
-                summary =
+                summary = "Confirm the registration"
+                description =
                     "After the token validated, submit the username & password requested from user. After this, " +
-                            "register application will be ready for admission"
+                            "register application will be ready for admission."
                 tags += RouteTag.Registration
                 consumes += ContentType.APPLICATION_JSON
 
                 injectExceptions()
-                receiving(requestLens)
+                receiving(requestLens to UserApplicationSubmission("Ray Eldath", "mypassword"))
                 returning(OK to "intact register application is submitted successfully")
             } bindContract Method.POST to ::handler
     }
@@ -301,7 +307,8 @@ object ConfirmEmail {
 
         override fun compile(): ContractRoute =
             "/confirm" / inboundTokenPath meta {
-                summary = "Validate the truthy as well as the expire of given URL token"
+                summary = "Validate given URL token"
+                description = "The truthy and the expire of the token will be validate."
                 tags += RouteTag.Registration
 
                 injectExceptions()
@@ -334,7 +341,7 @@ object ConfirmEmail {
     }
 }
 
-open class EmailRequest(val emailAddress: String) {
+open class EmailRequest(emailAddress: String) {
     init {
         if (!EmailValidator.getInstance().isValid(emailAddress))
             throw INVALID_EMAIL_ADDRESS()

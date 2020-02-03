@@ -14,6 +14,7 @@ import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.util.Permission
+import ray.eldath.offgrid.util.RouteTag
 import ray.eldath.offgrid.util.UserRole
 import ray.eldath.offgrid.util.transaction
 
@@ -26,11 +27,11 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
     private val pageSizeLens =
         Query.int().defaulted("pre_page", 20, "the size of elements that one page should contain.")
 
-    private val idLens = Query.int().optional("id", "Exact search by id")
-    private val emailLens = Query.string().optional("email", "Fuzzy filtered by email")
-    private val usernameLens = Query.string().optional("username", "Fuzzy filtered by username")
-    private val roleLens = Query.int().optional("role", "Filter by user role")
-    private val permissionLens = Query.string().optional("permission", "Filter by permission id")
+    private val idLens = Query.int().optional("id", "exact search by id")
+    private val emailLens = Query.string().optional("email", "fuzzy filtered by email")
+    private val usernameLens = Query.string().optional("username", "fuzzy filtered by username")
+    private val roleLens = Query.int().optional("role", "filter by user role")
+    private val permissionLens = Query.string().optional("permission", "filter by permission id")
 
     private val handler: HttpHandler = { req ->
         credentials(req).requirePermission(Permission.ListUser)
@@ -106,7 +107,8 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
     override fun compile(): ContractRoute =
         "/users" meta {
             summary = "Query users, ordered by id"
-            description = "provide pagination and filter parameters for matched users, but none of them is required."
+            description = "Provide pagination and filter parameters for matched users, but none of them is required."
+            tags += RouteTag.Users
             security = optionalSecurity
 
             queries += listOf(pageLens, pageSizeLens, idLens, emailLens, usernameLens, roleLens, permissionLens)
@@ -116,7 +118,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
                 Status.OK,
                 responseLens to ListResponse(
                     listOf(
-                        ListResponseEntry(30213, "",
+                        ListResponseEntry(30213, "Ray Eldath",
                             UserRole.Root.let { ListResponseRole(it.id, it.name) })
                     )
                 )

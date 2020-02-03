@@ -55,8 +55,6 @@ object Core {
         allRoutes += RejectUserApplication(credentials, security)
 
         allRoutes += ListUsers(credentials, security)
-        //
-        allRoutes += Test(credentials, security)
     }
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.
@@ -77,8 +75,8 @@ object Core {
     private const val ROOT = ""
     private val filterChain by lazy {
         (if (debug) {
-            DebuggingFilters.PrintRequestAndResponse()
-                .also { System.err.println("filter PrintRequestAndResponse is installed.") }
+            DebuggingFilters.PrintRequest()
+                .also { System.err.println("filter PrintRequest is installed.") }
         } else Filter.NoOp)
             .then(ServerFilters.CatchLensFailure)
             .then(MetricFilters.Server.RequestCounter(metrics))
