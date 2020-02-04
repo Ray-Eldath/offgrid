@@ -2,6 +2,8 @@ package ray.eldath.offgrid.component
 
 import com.fasterxml.jackson.core.exc.StreamReadException
 import com.fasterxml.jackson.databind.JsonMappingException
+import com.fasterxml.jackson.databind.PropertyNamingStrategy
+import com.fasterxml.jackson.databind.annotation.JsonNaming
 import org.http4k.contract.RouteMetaDsl
 import org.http4k.core.*
 import org.http4k.core.ContentType.Companion.APPLICATION_JSON
@@ -28,6 +30,7 @@ object ApiExceptionHandler {
         }
     }
 
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     private class JsonMappingExceptionWrapper(val message: String, val pathReference: String?) {
         companion object {
             val lens = Body.auto<JsonMappingExceptionWrapper>().toLens()

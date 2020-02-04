@@ -1,5 +1,7 @@
 package ray.eldath.offgrid.handler
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategy
+import com.fasterxml.jackson.databind.annotation.JsonNaming
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -27,6 +29,7 @@ import java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
 class ApproveUserApplication(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
 
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class InboundPermission(val id: String, val isShield: Boolean) {
         init {
             if (id !in allPermissionsId)
@@ -34,7 +37,8 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
         }
     }
 
-    data class ApproveRequest(val roleId: Int, val extraPermissions: List<InboundPermission>) {
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
+    data class ApproveRequest(val roleId: Int, val extraPermissions: List<InboundPermission>? = null) {
         init {
             if (roleId !in UserRole.values().map { it.id })
                 throw commonBadRequest("invalid roleId")()
@@ -74,7 +78,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
             }
             authorization.insert()
 
-            json.extraPermissions.map {
+            json.extraPermissions.orEmpty().map {
                 ExtraPermissionsRecord().apply {
                     authorizationId = authorization.userId
                     permissionId = Permission.fromId(it.id)
@@ -91,7 +95,10 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
                 sendApproveEmail(
                     application.email,
                     application.username,
-                    LocalDateTime.now(), role, json.extraPermissions
+                    LocalDateTime.now(),
+                    role,
+                    json.extraPermissions
+                        .orEmpty()
                         .filterNot { it.isShield }
                         .mapNotNull { Permission.fromId(it.id) }
                 )
@@ -108,9 +115,18 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
             security = optionalSecurity
             tags += RouteTag.UserApplication
 
-            consumes += ContentType.APPLICATION_JSON
+            allJson()
+            receiving(
+                requestLens to ApproveRequest(
+                    UserRole.MetricsAdmin.id,
+                    listOf(
+                        InboundPermission(Permission.User.id, false),
+                        InboundPermission(Permission.SystemMetrics.id, true)
+                    )
+                )
+            )
             returning(Status.OK to "given application has been deleted, and the user properly is created")
-        } bindContract Method.GET to ::handler
+        } bindContract Method.POST to ::handler
 
     companion object {
         private val ctx = CoroutineScope(Dispatchers.IO)
