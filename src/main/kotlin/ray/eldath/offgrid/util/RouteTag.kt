@@ -7,5 +7,6 @@ object RouteTag {
     val Authorization = Tag("Authorization", "Login, logout, etc.")
     val Registration = Tag("Registration", "Anything consists the registration procedure.")
 
+    val Self = Tag("Self", "Query or edit information of oneself.")
     val Users = Tag("Users", "Admin: list, modify, delete users.")
 }

@@ -55,6 +55,8 @@ object Core {
         allRoutes += RejectUserApplication(credentials, security)
 
         allRoutes += ListUsers(credentials, security)
+
+        allRoutes += Self(credentials, security)
     }
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.

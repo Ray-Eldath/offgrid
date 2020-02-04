@@ -19,8 +19,7 @@ import ray.eldath.offgrid.util.UserRole
 import ray.eldath.offgrid.util.transaction
 
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
-    data class ListResponseRole(val id: Int, val name: String)
-    data class ListResponseEntry(val id: Int, val username: String, val role: ListResponseRole)
+    data class ListResponseEntry(val id: Int, val username: String, val role: ExchangeRole)
     data class ListResponse(val result: List<ListResponseEntry>)
 
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
@@ -97,7 +96,8 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
                 ListResponseEntry(
                     user.id,
                     user.username,
-                    auth.role.let { ListResponseRole(it.id, it.name) })
+                    auth.role.toExchangeable()
+                )
             }
             .let { Response(Status.OK).with(responseLens of ListResponse(it)) }
     }
@@ -117,10 +117,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
             returning(
                 Status.OK,
                 responseLens to ListResponse(
-                    listOf(
-                        ListResponseEntry(30213, "Ray Eldath",
-                            UserRole.Root.let { ListResponseRole(it.id, it.name) })
-                    )
+                    listOf(ListResponseEntry(30213, "Ray Eldath", UserRole.Root.toExchangeable()))
                 )
             )
         } bindContract Method.GET to handler
@@ -129,3 +126,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
         val responseLens = Body.auto<ListResponse>().toLens()
     }
 }
+
+data class ExchangeRole(val id: Int, val name: String)
+
+fun UserRole.toExchangeable() = ExchangeRole(id, name)

@@ -30,15 +30,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
     ContractHandler(credentials, optionalSecurity) {
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    data class InboundPermission(val id: String, val isShield: Boolean) {
-        init {
-            if (id !in allPermissionsId)
-                throw commonBadRequest("invalid extraPermissionsId $id, note that id is required and name is illegal")()
-        }
-    }
-
-    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    data class ApproveRequest(val roleId: Int, val extraPermissions: List<InboundPermission>? = null) {
+    data class ApproveRequest(val roleId: Int, val extraPermissions: List<ExchangePermission>? = null) {
         init {
             if (roleId !in UserRole.values().map { it.id })
                 throw commonBadRequest("invalid roleId")()
@@ -120,8 +112,8 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
                 requestLens to ApproveRequest(
                     UserRole.MetricsAdmin.id,
                     listOf(
-                        InboundPermission(Permission.User.id, false),
-                        InboundPermission(Permission.SystemMetrics.id, true)
+                        Permission.User.toExchangeable(false),
+                        Permission.SystemMetrics.toExchangeable(true)
                     )
                 )
             )
@@ -131,7 +123,6 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
     companion object {
         private val ctx = CoroutineScope(Dispatchers.IO)
         private val requestLens = Body.auto<ApproveRequest>().toLens()
-        private val allPermissionsId = Permission.values().map { p -> p.id }
 
         suspend fun sendApproveEmail(
             email: String,
@@ -237,3 +228,17 @@ class RejectUserApplication(credentials: Credentials, optionalSecurity: Security
         }
     }
 }
+
+@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
+data class ExchangePermission(val id: String, val isShield: Boolean) {
+    init {
+        if (id !in allPermissionsId)
+            throw commonBadRequest("invalid extraPermissionsId $id, note that id is required and name is illegal")()
+    }
+
+    companion object {
+        private val allPermissionsId = Permission.values().map { p -> p.id }
+    }
+}
+
+fun Permission.toExchangeable(isShield: Boolean) = ExchangePermission(id, isShield)
