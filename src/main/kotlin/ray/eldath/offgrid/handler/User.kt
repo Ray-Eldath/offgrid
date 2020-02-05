@@ -13,21 +13,20 @@ import org.http4k.contract.meta
 import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.core.Status.Companion.OK
-import org.http4k.format.Jackson
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
 import ray.eldath.offgrid.component.*
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.BearerSecurity.bearerToken
 import ray.eldath.offgrid.component.UserRegistrationStatus.*
-import ray.eldath.offgrid.core.Core.getEnv
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
+import ray.eldath.offgrid.model.UrlToken
+import ray.eldath.offgrid.model.UsernamePassword
 import ray.eldath.offgrid.util.*
-import ray.eldath.offgrid.util.ErrorCodes.CONFIRM_TOKEN_EXPIRED
-import ray.eldath.offgrid.util.ErrorCodes.CONFIRM_TOKEN_NOT_FOUND
 import ray.eldath.offgrid.util.ErrorCodes.INVALID_EMAIL_ADDRESS
-import ray.eldath.offgrid.util.ErrorCodes.InvalidRegisterSubmission
+import ray.eldath.offgrid.util.ErrorCodes.TOKEN_EXPIRED
+import ray.eldath.offgrid.util.ErrorCodes.TOKEN_NOT_FOUND
 import ray.eldath.offgrid.util.ErrorCodes.UNCONFIRMED_EMAIL
 import ray.eldath.offgrid.util.ErrorCodes.USER_ALREADY_REGISTERED
 import ray.eldath.offgrid.util.ErrorCodes.USER_NOT_FOUND
@@ -140,14 +139,10 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
         }
 
         val ua = UserApplications.USER_APPLICATIONS
-        val ctx = CoroutineScope(Dispatchers.IO)
-        fun sendEmail(token: String) =
-            ctx.launch {
-                sendConfirmEmail(email, ConfirmEmail.ConfirmUrlToken.buildUrl(email, token))
-            }
 
+        val urlToken = ConfirmEmail.ConfirmUrlToken.generate(email)
         if (status == UNCONFIRMED) {
-            either.rightOrThrow.leftOrThrow.let { sendEmail(it.emailConfirmationToken) }
+            either.rightOrThrow.leftOrThrow.let { sendConfirmEmail(urlToken) }
 
             transaction {
                 update(ua)
@@ -156,14 +151,13 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
                     .execute()
             }
         } else if (status == NOT_FOUND) {
-            val token = ConfirmEmail.ConfirmUrlToken.generateToken()
-            sendEmail(token)
+            sendConfirmEmail(urlToken)
 
             transaction {
                 val record = newRecord(ua).apply {
                     this.email = email
                     isEmailConfirmed = false
-                    emailConfirmationToken = token
+                    emailConfirmationToken = urlToken.token
                     lastRequestTokenTime = LocalDateTime.now()
                 }
                 record.store()
@@ -186,18 +180,19 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
         } bindContract Method.POST to handler
 
     companion object {
+        private val ctx = CoroutineScope(Dispatchers.IO)
         val requestLens = Body.auto<RegisterRequest>().toLens()
 
         val TOKEN_EXPIRY_DURATION: Duration = Duration.ofHours(2)
 
-        suspend fun sendConfirmEmail(email: String, confirmUrl: String) =
-            DirectEmailUtil.sendEmail("[Offgrid] 注册确认：验证您的邮箱", "emailconfirm", email) {
+        fun sendConfirmEmail(token: ConfirmEmail.ConfirmUrlToken) = ctx.launch {
+            DirectEmailUtil.sendEmail("[Offgrid] 注册确认：验证您的邮箱", "emailconfirm", token.email) {
                 """
                     您好，
                     
                     感谢您注册 Offgrid！请访问下列链接以验证您的邮箱：
                     
-                    $confirmUrl
+                    ${token.url}
                     
                     该链接 ${TOKEN_EXPIRY_DURATION.toHours()} 小时内有效，请尽快完成注册确认。
                     
@@ -213,6 +208,7 @@ class Register(credentials: Credentials, optionalSecurity: Security) : ContractH
                     此邮件由 Offgrid 系统自动发出，请勿直接回复。若有更多问题请联系您组织的 Offgrid 管理员。
                 """.trimIndent()
             }
+        }
     }
 }
 
@@ -232,34 +228,16 @@ object ConfirmEmail {
         val time = application.lastRequestTokenTime
 
         if (application.emailConfirmationToken != urlToken.token)
-            throw CONFIRM_TOKEN_NOT_FOUND()
+            throw TOKEN_NOT_FOUND()
         else if (time.plus(Register.TOKEN_EXPIRY_DURATION).isBefore(LocalDateTime.now()))
-            throw CONFIRM_TOKEN_EXPIRED()
+            throw TOKEN_EXPIRED()
         return application
     }
 
     class SubmitUserApplication(credentials: Credentials, optionalSecurity: Security) :
         ContractHandler(credentials, optionalSecurity) {
 
-        data class UserApplicationSubmission(val username: String, val password: String) {
-            companion object {
-                private const val MAX_USERNAME_LENGTH = 16
-                private const val MAX_PASSWORD_LENGTH = 18
-                private const val MIN_PASSWORD_LENGTH = 6
-            }
-
-            fun check() {
-                val uLength = username.length
-                val pLength = password.length
-                when {
-                    uLength > MAX_USERNAME_LENGTH -> throw InvalidRegisterSubmission.USERNAME_TOO_LONG()
-                    pLength <= MIN_PASSWORD_LENGTH -> throw InvalidRegisterSubmission.PASSWORD_TOO_SHORT()
-                    pLength > MAX_PASSWORD_LENGTH -> throw InvalidRegisterSubmission.PASSWORD_TOO_LONG()
-                }
-            }
-        }
-
-        private val requestLens = Body.auto<UserApplicationSubmission>().toLens()
+        private val requestLens = Body.auto<UsernamePassword>().toLens()
 
         private fun handler(inboundToken: String) = { req: Request ->
             val json = requestLens(req)
@@ -291,7 +269,7 @@ object ConfirmEmail {
                 consumes += ContentType.APPLICATION_JSON
 
                 injectExceptions()
-                receiving(requestLens to UserApplicationSubmission("Ray Eldath", "mypassword"))
+                receiving(requestLens to UsernamePassword("Ray Eldath", "mypassword"))
                 returning(OK to "intact register application is submitted successfully")
             } bindContract Method.POST to ::handler
     }
@@ -321,24 +299,21 @@ object ConfirmEmail {
         USER_NOT_FOUND,
         ErrorCodes.APPLICATION_REJECTED,
         ErrorCodes.APPLICATION_PENDING,
-        CONFIRM_TOKEN_EXPIRED,
-        CONFIRM_TOKEN_NOT_FOUND
+        TOKEN_EXPIRED,
+        TOKEN_NOT_FOUND
     )
 
-    data class ConfirmUrlToken(val email: String, val token: String) : EmailRequest(email) {
+    data class ConfirmUrlToken(override val email: String, override val token: String) :
+        UrlToken(email, token, "confirm") {
+
         companion object {
-            fun generateToken() = UUID.randomUUID().toString()
-
-            fun buildUrl(email: String, token: String): String {
-                val urlToken = Jackson.asJsonString(ConfirmUrlToken(email, token)).base64Url()
-
-                return "${getEnv("OFFGRID_HOST")}/confirm/$urlToken"
-            }
-
             fun parse(token: String): ConfirmUrlToken =
-                Jackson.asA(token.decodeBase64Url(), ConfirmUrlToken::class)
+                UrlToken.parse(token).let { ConfirmUrlToken(it.email, it.token) }
+
+            fun generate(email: String) = ConfirmUrlToken(email, generateToken())
         }
     }
+
 }
 
 open class EmailRequest(emailAddress: String?) {

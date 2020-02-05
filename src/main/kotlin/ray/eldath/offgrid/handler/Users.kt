@@ -17,8 +17,7 @@ import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
-import ray.eldath.offgrid.handler.*
-import ray.eldath.offgrid.handler.Users.checkUserId
+import ray.eldath.offgrid.handler.UsersHandler.checkUserId
 import ray.eldath.offgrid.util.*
 
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
@@ -137,7 +136,6 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
     data class UpdateRequest(
         val username: String?,
         val email: String?,
-        val isEmailConfirmed: Boolean?,
         val role: Int?,
         val extraPermissions: List<ExchangePermission>?
     ) : EmailRequest(email)
@@ -168,14 +166,18 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
                     role = UserRole.fromId(json.role)
                 }.update()
 
-            if (json.extraPermissions != null)
-                json.extraPermissions.forEach {
+            if (json.extraPermissions != null) {
+                deleteFrom(ep)
+                    .where(ep.AUTHORIZATION_ID.eq(userId)).execute()
+
+                json.extraPermissions.map {
                     newRecord(ep).apply {
                         authorizationId = userId
                         permissionId = Permission.fromId(it.id)
                         isShield = it.isShield
-                    }.store()
-                }
+                    }
+                }.let { batchInsert(it) }
+            }
         }
 
         Response(Status.OK)
@@ -194,7 +196,6 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
                 requestLens to UpdateRequest(
                     "Ray Edas",
                     "alpha.beta@omega.com",
-                    false,
                     UserRole.UserAdmin.id,
                     listOf(Permission.ListUser.toExchangeable(false), Permission.DeleteUser.toExchangeable(true))
                 )
@@ -213,12 +214,7 @@ class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
     private fun handler(userId: Int): HttpHandler = {
         credentials(it).requirePermission(Permission.DeleteUser)
         checkUserId(userId)
-
-        transaction {
-            val u = Users.USERS
-
-            delete(u).where(u.ID.eq(userId))
-        }
+        deleteUser(userId)
 
         Response(Status.OK)
     }
@@ -232,9 +228,18 @@ class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
             consumes += ContentType.APPLICATION_JSON
             returning(Status.OK to "specified user has been deleted.")
         } bindContract Method.DELETE to ::handler
+
+    companion object {
+        fun deleteUser(userId: Int) {
+            transaction {
+                val u = Users.USERS
+                delete(u).where(u.ID.eq(userId)) // cascade deletion
+            }
+        }
+    }
 }
 
-object Users {
+object UsersHandler {
 
     fun checkUserId(userId: Int) {
         transaction {

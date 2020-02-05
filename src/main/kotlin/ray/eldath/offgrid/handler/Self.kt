@@ -5,6 +5,8 @@ import org.http4k.contract.meta
 import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
+import ray.eldath.offgrid.component.BearerSecurity
+import ray.eldath.offgrid.component.BearerSecurity.bearerToken
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.RouteTag
 import ray.eldath.offgrid.util.UserRole
@@ -20,7 +22,7 @@ class Self(credentials: Credentials, optionalSecurity: Security) :
         val permissions: List<ExchangePermission>? = null
     )
 
-    private fun handler(): HttpHandler = { req ->
+    private val handler: HttpHandler = { req ->
 
         credentials(req).run {
             SelfResponse(user.id, user.username, user.email, authorization.role.toExchangeable())
@@ -44,5 +46,26 @@ class Self(credentials: Credentials, optionalSecurity: Security) :
                     listOf(Permission.ComputationResult.toExchangeable(true))
                 )
             )
-        } bindContract Method.GET to handler()
+        } bindContract Method.GET to handler
+}
+
+class DeleteSelf(credentials: Credentials, optionalSecurity: Security) :
+    ContractHandler(credentials, optionalSecurity) {
+
+    private val handler: HttpHandler = { req ->
+        BearerSecurity.invalidate(req.bearerToken())
+        DeleteUser.deleteUser(credentials(req).user.id)
+
+        Response(Status.OK)
+    }
+
+    override fun compile(): ContractRoute =
+        "/self/delete" meta {
+            summary = "Delete current user"
+            description = "User should be redirected to login page immediately."
+            tags += RouteTag.Self
+            security = optionalSecurity
+
+            returning(Status.OK to "current logged user has been deleted.")
+        } bindContract Method.GET to handler
 }

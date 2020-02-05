@@ -45,16 +45,14 @@ object ErrorCodes {
     val USER_ALREADY_REGISTERED =
         ErrorCode(313, "user with the given email has already registered in ouy system.", CONFLICT)
 
-    val CONFIRM_TOKEN_EXPIRED =
-        ErrorCode(314, "given confirm token has expired, try to request a new token.", FORBIDDEN)
+    val TOKEN_EXPIRED = ErrorCode(314, "given token has expired, try to request a new token.", FORBIDDEN)
 
 
     // 4: not found
     fun commonNotFound(message: String = "given entity is not found") = ErrorCode(400, message, NOT_FOUND)
 
-    val USER_NOT_FOUND = ErrorCode(401, "incorrect email or password", UNAUTHORIZED)
-    val CONFIRM_TOKEN_NOT_FOUND =
-        ErrorCode(402, "given confirm token not found, try to request a new token.", NOT_FOUND)
+    val USER_NOT_FOUND = ErrorCode(401, "incorrect email or password", NOT_FOUND)
+    val TOKEN_NOT_FOUND = ErrorCode(402, "given token not found, try to request a new token.", NOT_FOUND)
 
     // 5: internal server error
     fun sendEmailFailed(target: String, log: String, type: String = "address confirmation email") =

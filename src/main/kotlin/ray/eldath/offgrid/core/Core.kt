@@ -50,15 +50,20 @@ object Core {
         allRoutes += Register(credentials, security)
         allRoutes += ConfirmEmail.ValidateUrlToken(credentials, security)
         allRoutes += ConfirmEmail.SubmitUserApplication(credentials, security)
+        allRoutes += ResetPassword.Invoke(credentials, security)
+        allRoutes += ResetPassword.Verify(credentials, security)
+        allRoutes += ResetPassword.Submit(credentials, security)
 
         allRoutes += ApproveUserApplication(credentials, security)
         allRoutes += RejectUserApplication(credentials, security)
+        allRoutes += ResetUserApplication(credentials, security)
 
         allRoutes += ListUsers(credentials, security)
         allRoutes += ModifyUser(credentials, security)
         allRoutes += DeleteUser(credentials, security)
 
         allRoutes += Self(credentials, security)
+        allRoutes += DeleteSelf(credentials, security)
     }
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.

@@ -13,11 +13,11 @@ import org.http4k.core.*
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
 import org.http4k.lens.int
+import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
+import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
+import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
-import ray.eldath.offgrid.generated.offgrid.tables.records.AuthorizationsRecord
-import ray.eldath.offgrid.generated.offgrid.tables.records.ExtraPermissionsRecord
-import ray.eldath.offgrid.generated.offgrid.tables.records.UsersRecord
 import ray.eldath.offgrid.util.*
 import ray.eldath.offgrid.util.DirectEmailUtil.sendEmail
 import ray.eldath.offgrid.util.ErrorCodes.commonBadRequest
@@ -46,24 +46,14 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
         transaction {
             val ua = UserApplications.USER_APPLICATIONS
 
-            val application =
-                select()
-                    .from(ua)
-                    .where(ua.ID.eq(id))
-                    .fetchOptional { it.into(ua).into(UserApplication::class.java) }
-                    .run {
-                        if (isEmpty)
-                            throw commonNotFound()()
-                        else get()
-                    }
-
-            val user = UsersRecord().apply {
+            val application = UserApplicationHandler.getByIdChecked(id)
+            val user = newRecord(Users.USERS).apply {
                 username = application.username
                 email = application.email
             }
-            user.store()
+            user.insert()
 
-            val authorization = AuthorizationsRecord().apply {
+            val authorization = newRecord(Authorizations.AUTHORIZATIONS).apply {
                 userId = user.id
                 hashedPassword = application.hashedPassword
                 this.role = role
@@ -71,7 +61,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
             authorization.insert()
 
             json.extraPermissions.orEmpty().map {
-                ExtraPermissionsRecord().apply {
+                newRecord(ExtraPermissions.EXTRA_PERMISSIONS).apply {
                     authorizationId = authorization.userId
                     permissionId = Permission.fromId(it.id)
                     isShield = it.isShield
@@ -79,7 +69,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
             }.let { batchInsert(it) }
 
             deleteFrom(ua)
-                .where(ua.EMAIL.eq(application.email))
+                .where(ua.EMAIL.eq(application.email)).execute()
 
             application
         }.let { application ->
@@ -170,19 +160,12 @@ class RejectUserApplication(credentials: Credentials, optionalSecurity: Security
         transaction {
             val ua = UserApplications.USER_APPLICATIONS
 
-            select()
-                .from(ua)
-                .where(ua.ID.eq(id))
-                .fetchOptional { it.into(ua).into(UserApplication::class.java) }
-                .let {
-                    if (it.isEmpty)
-                        throw commonNotFound()()
-                    else it.get()
-                }
+            UserApplicationHandler
+                .getByIdChecked(id)
                 .sidecar {
                     update(ua)
                         .set(ua.IS_APPLICATION_PENDING, false)
-                        .where(ua.ID.eq(it.id))
+                        .where(ua.ID.eq(it.id)).execute()
                 }
         }.let { ctx.launch { sendRejectEmail(it.email, it.username, LocalDateTime.now()) } }
 
@@ -227,6 +210,54 @@ class RejectUserApplication(credentials: Credentials, optionalSecurity: Security
             }
         }
     }
+}
+
+class ResetUserApplication(credentials: Credentials, optionalSecurity: Security) :
+    ContractHandler(credentials, optionalSecurity) {
+
+    private fun handler(id: Int, useless: String): HttpHandler = { req ->
+        credentials(req).requirePermission(Permission.RejectUserApplication)
+
+        transaction {
+            val ua = UserApplications.USER_APPLICATIONS
+
+            UserApplicationHandler.getByIdChecked(id).let {
+                deleteFrom(ua)
+                    .where(ua.ID.eq(it.id)).execute()
+            }
+        }
+
+        Response(Status.OK)
+    }
+
+    override fun compile(): ContractRoute =
+        "/application" / Path.int().of("id", "id of the application") / "reset" meta {
+            summary = "Reset the registration application"
+            description =
+                "Clear related entry in the database. After this, banned applicant could submit another application again."
+            security = optionalSecurity
+            tags += RouteTag.UserApplication
+
+            returning(Status.OK to "given application entry has been deleted")
+        } bindContract Method.GET to ::handler
+}
+
+object UserApplicationHandler {
+
+    fun getByIdChecked(id: Int) =
+        transaction {
+            val ua = UserApplications.USER_APPLICATIONS
+
+            select()
+                .from(ua)
+                .where(ua.ID.eq(id))
+                .fetchOptional { it.into(ua).into(UserApplication::class.java) }
+                .run {
+                    if (isEmpty)
+                        throw commonNotFound()()
+                    else get()
+                }
+        }
 }
 
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)

@@ -46,13 +46,24 @@ create table Authorizations
 
 create table Extra_Permissions
 (
-    authorization_id int                  not null
-        primary key,
+    authorization_id int                  not null,
     permission_id    varchar(5)           not null,
     is_shield        tinyint(1) default 1 not null,
-    constraint fk_ExtraPermissions_authorization_id_user_id
+    constraint Extra_Permissions_Authorizations_user_id_fk
         foreign key (authorization_id) references Authorizations (user_id)
             on delete cascade
+);
+
+create table Reset_Password_Applications
+(
+    id               int auto_increment
+        primary key,
+    authorization_id int         not null,
+    email            varchar(50) not null,
+    token            varchar(50) not null,
+    request_time     datetime    not null,
+    constraint Reset_Passwords_Authorizations_user_id_fk
+        foreign key (authorization_id) references Authorizations (user_id)
 );
 
 alter table Users

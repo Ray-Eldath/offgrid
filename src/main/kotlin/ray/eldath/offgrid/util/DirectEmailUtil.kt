@@ -6,8 +6,7 @@ import com.aliyuncs.exceptions.ClientException
 import com.aliyuncs.exceptions.ServerException
 import com.aliyuncs.http.MethodType
 import com.aliyuncs.profile.DefaultProfile
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.coroutineScope
 import org.slf4j.LoggerFactory
 import ray.eldath.offgrid.core.Core
 
@@ -30,7 +29,7 @@ object DirectEmailUtil {
         toAddress: String,
         fromAlias: String = "[no reply] Offgrid User Center",
         textBody: () -> String
-    ) = withContext(IO) {
+    ) = coroutineScope {
         fun warn(e: ClientException, type: String = "ClientException"): Unit =
             ("AliyunDirectMail: $type(errCode: ${e.errCode}) thrown when sendEmail to email address $toAddress " +
                     "with subject $subject and tag $aliyunTag").let {

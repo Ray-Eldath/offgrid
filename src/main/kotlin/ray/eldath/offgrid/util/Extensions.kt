@@ -3,6 +3,7 @@ package ray.eldath.offgrid.util
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.http4k.contract.RouteMetaDsl
 import org.http4k.core.ContentType
+import java.util.*
 
 fun <T> T.sidecar(aside: (T) -> Unit): T {
     val r = this
@@ -23,4 +24,5 @@ fun RouteMetaDsl.outJson() {
     produces += ContentType.APPLICATION_JSON
 }
 
+fun <T> Optional<T>.getOrNull(): T? = if (isEmpty) null else get()
 fun Any.json(): String = jacksonObjectMapper().writeValueAsString(this)

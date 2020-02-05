@@ -73,8 +73,8 @@ class TestDataClass {
     inner class TestInboundUser {
         @Test
         fun `test failed requirePermission`() {
-            expectCatching { inbound.requirePermission(CreateUser) }.failed()
-                .isEqualTo(permissionDeniedException(CreateUser)).println()
+            expectCatching { inbound.requirePermission(ListUser) }.failed()
+                .isEqualTo(permissionDeniedException(ListUser)).println()
 
             expectCatching { inbound.requirePermission(User, DeleteUser) }.failed()
                 .isEqualTo(permissionDeniedException(User, DeleteUser)).println()
@@ -88,7 +88,7 @@ class TestDataClass {
             val auth = Authorization(1, hashedPassword, UserRole.MetricsAdmin)
             val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, false)))
 
-            expectCatching { inbound.requirePermission(CreateUser, DeleteUser, User) }.succeeded().println()
+            expectCatching { inbound.requirePermission(ListUser, DeleteUser, User) }.succeeded().println()
             expectCatching { inbound.requirePermission(Metrics, SystemMetrics) }.succeeded().println()
         }
 

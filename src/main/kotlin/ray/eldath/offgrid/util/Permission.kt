@@ -48,7 +48,7 @@ enum class Permission(
 
     Root("ROOT", User, UserApplication, ProviderRegistry, ModelRegistry, ComputationResult, Graph, Metrics);
 
-    val rootId = id.replaceAfter("_", "")
+    val rootId = id.replaceAfter("_", "").replace("_", "")
 
     companion object {
         fun fromId(id: String) = values().firstOrNull { it.id == id }
