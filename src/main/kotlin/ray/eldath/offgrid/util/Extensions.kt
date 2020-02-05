@@ -11,8 +11,16 @@ fun <T> T.sidecar(aside: (T) -> Unit): T {
 }
 
 fun RouteMetaDsl.allJson() {
-    this.produces += ContentType.APPLICATION_JSON
-    this.consumes += ContentType.APPLICATION_JSON
+    inJson()
+    outJson()
+}
+
+fun RouteMetaDsl.inJson() {
+    consumes += ContentType.APPLICATION_JSON
+}
+
+fun RouteMetaDsl.outJson() {
+    produces += ContentType.APPLICATION_JSON
 }
 
 fun Any.json(): String = jacksonObjectMapper().writeValueAsString(this)

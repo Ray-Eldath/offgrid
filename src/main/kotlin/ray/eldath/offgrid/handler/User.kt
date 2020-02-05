@@ -341,9 +341,9 @@ object ConfirmEmail {
     }
 }
 
-open class EmailRequest(emailAddress: String) {
+open class EmailRequest(emailAddress: String?) {
     init {
-        if (!EmailValidator.getInstance().isValid(emailAddress))
+        if (emailAddress != null && !EmailValidator.getInstance().isValid(emailAddress))
             throw INVALID_EMAIL_ADDRESS()
     }
 }

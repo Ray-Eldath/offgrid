@@ -7,11 +7,9 @@ enum class Permission(
     vararg val childrenPermissions: Permission? = arrayOf()
 ) {
     ListUser("U_L"),
-    CreateUser("U_C"),
-    ModifyUserData("U_DM"),
-    ModifyUserPermission("U_PM"),
+    ModifyUser("U_M"),
     DeleteUser("U_D"),
-    User("U", ListUser, CreateUser, ModifyUserData, ModifyUserPermission, DeleteUser),
+    User("U", ListUser, ModifyUser, DeleteUser),
 
     ApproveUserApplication("UA_A"),
     RejectUserApplication("UA_R"),

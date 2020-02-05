@@ -55,6 +55,8 @@ object Core {
         allRoutes += RejectUserApplication(credentials, security)
 
         allRoutes += ListUsers(credentials, security)
+        allRoutes += ModifyUser(credentials, security)
+        allRoutes += DeleteUser(credentials, security)
 
         allRoutes += Self(credentials, security)
     }

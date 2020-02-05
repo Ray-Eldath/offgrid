@@ -35,7 +35,8 @@ create table Users
 
 create table Authorizations
 (
-    user_id         int          not null,
+    user_id         int          not null
+        primary key,
     hashed_password varchar(150) not null,
     role            int          not null,
     constraint fk_Authorizations_user_id_id
@@ -45,7 +46,8 @@ create table Authorizations
 
 create table Extra_Permissions
 (
-    authorization_id int                  not null,
+    authorization_id int                  not null
+        primary key,
     permission_id    varchar(5)           not null,
     is_shield        tinyint(1) default 1 not null,
     constraint fk_ExtraPermissions_authorization_id_user_id

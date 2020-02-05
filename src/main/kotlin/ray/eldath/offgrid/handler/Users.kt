@@ -1,10 +1,14 @@
 package ray.eldath.offgrid.handler
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategy
+import com.fasterxml.jackson.databind.annotation.JsonNaming
 import org.http4k.contract.ContractRoute
+import org.http4k.contract.div
 import org.http4k.contract.meta
 import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
+import org.http4k.lens.Path
 import org.http4k.lens.Query
 import org.http4k.lens.int
 import org.http4k.lens.string
@@ -13,10 +17,9 @@ import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
-import ray.eldath.offgrid.util.Permission
-import ray.eldath.offgrid.util.RouteTag
-import ray.eldath.offgrid.util.UserRole
-import ray.eldath.offgrid.util.transaction
+import ray.eldath.offgrid.handler.*
+import ray.eldath.offgrid.handler.Users.checkUserId
+import ray.eldath.offgrid.util.*
 
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
     data class ListResponseEntry(val id: Int, val username: String, val role: ExchangeRole)
@@ -124,6 +127,123 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
 
     companion object {
         val responseLens = Body.auto<ListResponse>().toLens()
+    }
+}
+
+class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
+    ContractHandler(credentials, optionalSecurity) {
+
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
+    data class UpdateRequest(
+        val username: String?,
+        val email: String?,
+        val isEmailConfirmed: Boolean?,
+        val role: Int?,
+        val extraPermissions: List<ExchangePermission>?
+    ) : EmailRequest(email)
+
+    private fun handler(userId: Int): HttpHandler = { req ->
+        credentials(req).requirePermission(Permission.ModifyUser)
+        checkUserId(userId)
+
+        val json = requestLens(req)
+
+        transaction {
+            val u = Users.USERS
+            val a = Authorizations.AUTHORIZATIONS
+            val ep = ExtraPermissions.EXTRA_PERMISSIONS
+
+            if (json.username != null || json.email != null)
+                newRecord(u).apply {
+                    id = userId
+                    if (json.username != null)
+                        username = json.username
+                    if (json.email != null)
+                        email = json.email
+                }.update()
+
+            if (json.role != null)
+                newRecord(a).apply {
+                    this.userId = userId
+                    role = UserRole.fromId(json.role)
+                }.update()
+
+            if (json.extraPermissions != null)
+                json.extraPermissions.forEach {
+                    newRecord(ep).apply {
+                        authorizationId = userId
+                        permissionId = Permission.fromId(it.id)
+                        isShield = it.isShield
+                    }.store()
+                }
+        }
+
+        Response(Status.OK)
+    }
+
+    override fun compile(): ContractRoute =
+        "/users" / Path.int().of("id", "id of the user") meta {
+            summary = "Edit user"
+            description =
+                "All fields are optional. Note that any modification will only take effect after the modified user is re-login."
+            tags += RouteTag.Users
+
+            security = optionalSecurity
+            consumes += ContentType.APPLICATION_JSON
+            receiving(
+                requestLens to UpdateRequest(
+                    "Ray Edas",
+                    "alpha.beta@omega.com",
+                    false,
+                    UserRole.UserAdmin.id,
+                    listOf(Permission.ListUser.toExchangeable(false), Permission.DeleteUser.toExchangeable(true))
+                )
+            )
+            returning(Status.OK to "specified user has been updated use given information.")
+        } bindContract Method.PATCH to ::handler
+
+    companion object {
+        private val requestLens = Body.auto<UpdateRequest>().toLens()
+    }
+}
+
+class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
+    ContractHandler(credentials, optionalSecurity) {
+
+    private fun handler(userId: Int): HttpHandler = {
+        credentials(it).requirePermission(Permission.DeleteUser)
+        checkUserId(userId)
+
+        transaction {
+            val u = Users.USERS
+
+            delete(u).where(u.ID.eq(userId))
+        }
+
+        Response(Status.OK)
+    }
+
+    override fun compile(): ContractRoute =
+        "/users" / Path.int().of("id", "id of the user") meta {
+            summary = "Delete user"
+            tags += RouteTag.Users
+
+            security = optionalSecurity
+            consumes += ContentType.APPLICATION_JSON
+            returning(Status.OK to "specified user has been deleted.")
+        } bindContract Method.DELETE to ::handler
+}
+
+object Users {
+
+    fun checkUserId(userId: Int) {
+        transaction {
+            val u = Users.USERS
+            select()
+                .from(u)
+                .where(u.ID.eq(userId))
+                .fetchOptional().orElseThrow { ErrorCodes.commonNotFound()() }
+        }
     }
 }
 

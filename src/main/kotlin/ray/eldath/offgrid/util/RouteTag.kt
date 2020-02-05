@@ -8,5 +8,5 @@ object RouteTag {
     val Registration = Tag("Registration", "Anything consists the registration procedure.")
 
     val Self = Tag("Self", "Query or edit information of oneself.")
-    val Users = Tag("Users", "Admin: list, modify, delete users.")
+    val Users = Tag("Users", "Admin: list, modify, delete user(s).")
 }
