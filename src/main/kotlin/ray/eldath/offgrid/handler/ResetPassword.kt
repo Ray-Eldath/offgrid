@@ -1,5 +1,7 @@
 package ray.eldath.offgrid.handler
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategy
+import com.fasterxml.jackson.databind.annotation.JsonNaming
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -10,6 +12,7 @@ import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
+import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.Argon2
 import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ResetPasswordApplications
@@ -129,10 +132,11 @@ object ResetPassword {
         }
 
         override fun compile(): ContractRoute =
-            "/reset_password/" / Path.of("urlToken") meta {
+            "/reset_password" / inboundTokenPath meta {
                 summary = "Verify the reset URL token"
                 tags += RouteTag.ResetPassword
 
+                exception(ErrorCodes.TOKEN_NOT_FOUND, ErrorCodes.TOKEN_EXPIRED)
                 returning(Status.OK to "given URL token is valid")
             } bindContract Method.GET to ::handler
     }
@@ -140,7 +144,8 @@ object ResetPassword {
     class Submit(credentials: Credentials, optionalSecurity: Security) :
         ContractHandler(credentials, optionalSecurity) {
 
-        data class SubmitRequest(val password: String)
+        @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
+        data class SubmitRequest(val newPassword: String)
 
         private fun handler(urlToken: String): HttpHandler = {
             val reset = verifyToken(ResetPasswordUrlToken.parse(urlToken))
@@ -164,15 +169,16 @@ object ResetPassword {
         }
 
         override fun compile(): ContractRoute =
-            "/reset_password/" / Path.of("urlToken") meta {
+            "/reset_password/" / inboundTokenPath meta {
                 summary = "Submit the new password"
                 description = "Still, the URL token will be verified first."
                 tags += RouteTag.ResetPassword
                 inJson()
 
+                exception(ErrorCodes.TOKEN_NOT_FOUND, ErrorCodes.TOKEN_EXPIRED)
                 receiving(requestLens to SubmitRequest("12345678abc"))
                 returning(Status.OK to "new password has been successfully set")
-            } bindContract Method.GET to ::handler
+            } bindContract Method.POST to ::handler
 
         companion object {
             private val requestLens = Body.auto<SubmitRequest>().toLens()
@@ -180,6 +186,8 @@ object ResetPassword {
     }
 
     private val TOKEN_EXPIRY_DURATION = Duration.ofMinutes(30)
+    private val inboundTokenPath =
+        Path.of("urlToken", "generated URL token, contained in the link sent in reset confirmation email")
 }
 
 class ResetPasswordUrlToken(override val email: String, override val token: String) :

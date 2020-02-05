@@ -20,6 +20,7 @@ import ray.eldath.offgrid.util.UserRole
 import ray.eldath.offgrid.util.transaction
 import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
+import strikt.assertions.isEmpty
 import java.net.URLEncoder
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -30,6 +31,13 @@ class TestUsers {
         private val listUsers = ListUsers(credentials, security).compile()
         private val resp = { message: HttpMessage ->
             ListUsers.responseLens(message).result.also { println(it) }.map { it.username }.expect()
+        }
+
+        @Test
+        fun `should return empty`() {
+            resp(listUsers(request("username" to "wwww"))).isEmpty()
+
+            resp(listUsers(request("email" to "omega.beta"))).isEmpty()
         }
 
         @Test
