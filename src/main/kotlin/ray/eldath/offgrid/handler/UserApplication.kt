@@ -18,6 +18,8 @@ import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
 import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
+import ray.eldath.offgrid.model.InboundExtraPermission
+import ray.eldath.offgrid.model.toExtraExchangeable
 import ray.eldath.offgrid.util.*
 import ray.eldath.offgrid.util.DirectEmailUtil.sendEmail
 import ray.eldath.offgrid.util.ErrorCodes.commonBadRequest
@@ -30,7 +32,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
     ContractHandler(credentials, optionalSecurity) {
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    data class ApproveRequest(val roleId: Int, val extraPermissions: List<ExchangePermission>? = null) {
+    data class ApproveRequest(val roleId: Int, val extraPermissions: List<InboundExtraPermission>? = null) {
         init {
             if (roleId !in UserRole.values().map { it.id })
                 throw commonBadRequest("invalid roleId")()
@@ -102,8 +104,8 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
                 requestLens to ApproveRequest(
                     UserRole.MetricsAdmin.id,
                     listOf(
-                        Permission.User.toExchangeable(false),
-                        Permission.SystemMetrics.toExchangeable(true)
+                        Permission.User.toExtraExchangeable(false),
+                        Permission.SystemMetrics.toExtraExchangeable(true)
                     )
                 )
             )
@@ -259,17 +261,3 @@ object UserApplicationHandler {
                 }
         }
 }
-
-@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-data class ExchangePermission(val id: String, val isShield: Boolean) {
-    init {
-        if (id !in allPermissionsId)
-            throw commonBadRequest("invalid extraPermissionsId $id, note that id is required and name is illegal")()
-    }
-
-    companion object {
-        private val allPermissionsId = Permission.values().map { p -> p.id }
-    }
-}
-
-fun Permission.toExchangeable(isShield: Boolean) = ExchangePermission(id, isShield)

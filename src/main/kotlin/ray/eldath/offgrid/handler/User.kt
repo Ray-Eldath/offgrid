@@ -21,8 +21,10 @@ import ray.eldath.offgrid.component.BearerSecurity.bearerToken
 import ray.eldath.offgrid.component.UserRegistrationStatus.*
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
+import ray.eldath.offgrid.model.OutboundUser
 import ray.eldath.offgrid.model.UrlToken
 import ray.eldath.offgrid.model.UsernamePassword
+import ray.eldath.offgrid.model.toOutbound
 import ray.eldath.offgrid.util.*
 import ray.eldath.offgrid.util.ErrorCodes.INVALID_EMAIL_ADDRESS
 import ray.eldath.offgrid.util.ErrorCodes.TOKEN_EXPIRED
@@ -39,7 +41,7 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
     data class LoginRequest(val email: String, val password: String) : EmailRequest(email)
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    data class LoginResponse(val bearer: String, val expireIn: Long)
+    data class LoginResponse(val bearer: String, val expireIn: Long, val self: OutboundUser)
 
     private val expireIn = (BearerSecurity.EXPIRY_MINUTES * 60).toLong()
 
@@ -58,9 +60,14 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
             else
                 either.rightOrThrow.rightOrThrow
 
+        val (user, auth, _) = inbound
+
 
         val bearer = BearerSecurity.authorize(inbound)
-        Response(OK).with(responseLens of LoginResponse(bearer, expireIn))
+        val self =
+            user.run { OutboundUser(id, username, email, auth.role.toOutbound(), inbound.permissions.toOutbound()) }
+
+        Response(OK).with(responseLens of LoginResponse(bearer, expireIn, self))
     }
 
     override fun compile(): ContractRoute =
@@ -71,7 +78,7 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
             allJson()
 
             receiving(requestLens to LoginRequest("alpha.beta@omega.com", "mypassword"))
-            returning(OK, responseLens to LoginResponse(UUID.randomUUID().toString(), expireIn))
+            returning(OK, responseLens to LoginResponse(UUID.randomUUID().toString(), expireIn, OutboundUser.mock))
             exception(
                 INVALID_EMAIL_ADDRESS,
                 UNCONFIRMED_EMAIL,

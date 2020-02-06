@@ -26,20 +26,18 @@ data class InboundUser(
     val authorization: Authorization,
     val extraPermission: Collection<ExtraPermission>
 ) {
-    private val expandedPermissions by lazy {
-        val r = hashMapOf<Permission, Boolean>()
+    val permissions: Set<Permission> by lazy {
+        val r = hashSetOf<Permission>()
 
-        authorization.role.defaultPermissions.forEach { r[it] = true }
-        extraPermission.forEach {
-            it.permissionId.expand().forEach { i -> r[i] = !it.isShield }
-        }
+        r.addAll(authorization.role.defaultPermissions.expand())
+        r.addAll(extraPermission.filter { it.isShield == false }.flatMap { it.permissionId.expand() })
+        extraPermission.filter { it.isShield }.forEach { r.removeAll(it.permissionId.expand()) }
 
         r
     }
 
-    fun requirePermission(vararg permissions: Permission) {
-        permissions.expand()
-            .filter { expandedPermissions[it]?.let { b -> !b } ?: true }
+    fun requirePermission(vararg requires: Permission) {
+        requires.expand().filterNot { permissions.contains(it) }
             .takeIf { it.isNotEmpty() }
             ?.let { throw permissionDenied(it)() }
     }

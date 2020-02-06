@@ -18,10 +18,14 @@ import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.handler.UsersHandler.checkUserId
+import ray.eldath.offgrid.model.InboundExtraPermission
+import ray.eldath.offgrid.model.OutboundRole
+import ray.eldath.offgrid.model.toExtraExchangeable
+import ray.eldath.offgrid.model.toOutbound
 import ray.eldath.offgrid.util.*
 
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
-    data class ListResponseEntry(val id: Int, val username: String, val role: ExchangeRole)
+    data class ListResponseEntry(val id: Int, val username: String, val email: String, val role: OutboundRole)
     data class ListResponse(val result: List<ListResponseEntry>)
 
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
@@ -98,7 +102,8 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
                 ListResponseEntry(
                     user.id,
                     user.username,
-                    auth.role.toExchangeable()
+                    user.email,
+                    auth.role.toOutbound()
                 )
             }
             .let { Response(Status.OK).with(responseLens of ListResponse(it)) }
@@ -119,7 +124,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
             returning(
                 Status.OK,
                 responseLens to ListResponse(
-                    listOf(ListResponseEntry(30213, "Ray Eldath", UserRole.Root.toExchangeable()))
+                    listOf(ListResponseEntry(30213, "Ray Eldath", "abc@omega.com", UserRole.Root.toOutbound()))
                 )
             )
         } bindContract Method.GET to handler
@@ -137,7 +142,7 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
         val username: String?,
         val email: String?,
         val role: Int?,
-        val extraPermissions: List<ExchangePermission>?
+        val extraPermissions: List<InboundExtraPermission>?
     ) : EmailRequest(email)
 
     private fun handler(userId: Int): HttpHandler = { req ->
@@ -197,7 +202,7 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
                     "Ray Edas",
                     "alpha.beta@omega.com",
                     UserRole.UserAdmin.id,
-                    listOf(Permission.ListUser.toExchangeable(false), Permission.DeleteUser.toExchangeable(true))
+                    listOf(Permission.ListUser.toExtraExchangeable(false), Permission.DeleteUser.toExtraExchangeable(true))
                 )
             )
             returning(Status.OK to "specified user has been updated use given information.")
@@ -251,7 +256,3 @@ object UsersHandler {
         }
     }
 }
-
-data class ExchangeRole(val id: Int, val name: String)
-
-fun UserRole.toExchangeable() = ExchangeRole(id, name)
