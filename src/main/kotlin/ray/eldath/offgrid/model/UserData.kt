@@ -2,6 +2,7 @@ package ray.eldath.offgrid.model
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming
+import ray.eldath.offgrid.component.Md5
 import ray.eldath.offgrid.util.ErrorCodes
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
@@ -41,7 +42,8 @@ data class OutboundUser(
     val username: String,
     val email: String,
     val role: OutboundRole,
-    val permissions: Collection<OutboundPermission>
+    val permissions: Collection<OutboundPermission>,
+    val avatarUrl: String = "https://cdn.v2ex.com/gravatar/${Md5.hash(email)}.jpg?r=g&d=retro&s=200"
 ) {
 
     companion object {

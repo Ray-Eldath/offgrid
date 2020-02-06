@@ -18,6 +18,8 @@ import ray.eldath.offgrid.util.ErrorCodes.permissionDenied
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.Permission.Companion.expand
 import ray.eldath.offgrid.util.sidecar
+import ray.eldath.offgrid.util.toHexString
+import java.security.MessageDigest
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -92,4 +94,10 @@ object Argon2 {
             argon2.wipeArray(password)
         }
     }
+}
+
+object Md5 {
+    private val md5 = MessageDigest.getInstance("MD5")
+
+    fun hash(input: String) = md5.digest(input.toByteArray()).toHexString()
 }
