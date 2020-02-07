@@ -35,6 +35,7 @@ object ErrorCodes {
     )
 
     val LOGIN_REQUIRED = ErrorCode(302, "login required, you should login first", UNAUTHORIZED)
+    val AUTH_TOKEN_INVALID_OR_EXPIRED = ErrorCode(303, "auth token invalid or expired, try login again", UNAUTHORIZED)
     val UNCONFIRMED_EMAIL = ErrorCode(310, "unconfirmed email address", FORBIDDEN)
     val APPLICATION_PENDING = ErrorCode(311, "your register application is pending", FORBIDDEN)
     val APPLICATION_REJECTED = ErrorCode(

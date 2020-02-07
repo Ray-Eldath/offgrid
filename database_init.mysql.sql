@@ -7,6 +7,7 @@ grant all privileges on offgrid.* to 'offgrid'@'%';
 flush privileges;
 
 #
+use offgrid;
 
 create table User_Applications
 (

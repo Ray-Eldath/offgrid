@@ -8,10 +8,8 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry
 import org.http4k.contract.contract
 import org.http4k.contract.openapi.ApiInfo
 import org.http4k.contract.openapi.v3.OpenApi3
-import org.http4k.core.Filter
-import org.http4k.core.HttpHandler
-import org.http4k.core.NoOp
-import org.http4k.core.then
+import org.http4k.core.*
+import org.http4k.filter.CorsPolicy
 import org.http4k.filter.DebuggingFilters
 import org.http4k.filter.MetricFilters
 import org.http4k.filter.ServerFilters
@@ -64,6 +62,8 @@ object Core {
 
         allRoutes += Self(credentials, security)
         allRoutes += DeleteSelf(credentials, security)
+
+        allRoutes += Echo(credentials, security)
     }
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.
@@ -84,8 +84,15 @@ object Core {
     private const val ROOT = ""
     private val filterChain by lazy {
         (if (debug) {
-            DebuggingFilters.PrintRequest()
+            DebuggingFilters.PrintRequest(debugStream = true)
                 .also { System.err.println("filter PrintRequest is installed.") }
+                .then(ServerFilters.Cors(CorsPolicy(listOf("*"), listOf("*"), Method.values().toList())))
+                .also {
+                    System.err.println(
+                        "filter Cors with unsafe global permissive is installed. note that CORS may still needed " +
+                                "in production, but global permissive should definitely be limited to debug only."
+                    )
+                }
         } else Filter.NoOp)
             .then(ServerFilters.CatchLensFailure)
             .then(MetricFilters.Server.RequestCounter(metrics))

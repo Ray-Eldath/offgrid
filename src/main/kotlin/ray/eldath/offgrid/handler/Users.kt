@@ -18,10 +18,7 @@ import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.handler.UsersHandler.checkUserId
-import ray.eldath.offgrid.model.InboundExtraPermission
-import ray.eldath.offgrid.model.OutboundRole
-import ray.eldath.offgrid.model.toExtraExchangeable
-import ray.eldath.offgrid.model.toOutbound
+import ray.eldath.offgrid.model.*
 import ray.eldath.offgrid.util.*
 
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
@@ -140,7 +137,7 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class UpdateRequest(
         val username: String?,
-        val email: String?,
+        override val email: String?,
         val role: Int?,
         val extraPermissions: List<InboundExtraPermission>?
     ) : EmailRequest(email)

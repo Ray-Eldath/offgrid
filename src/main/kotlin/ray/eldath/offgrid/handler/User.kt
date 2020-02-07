@@ -18,14 +18,13 @@ import org.http4k.lens.Path
 import ray.eldath.offgrid.component.*
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.BearerSecurity.bearerToken
+import ray.eldath.offgrid.component.BearerSecurity.safeBearerToken
 import ray.eldath.offgrid.component.UserRegistrationStatus.*
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
-import ray.eldath.offgrid.model.OutboundUser
-import ray.eldath.offgrid.model.UrlToken
-import ray.eldath.offgrid.model.UsernamePassword
-import ray.eldath.offgrid.model.toOutbound
+import ray.eldath.offgrid.model.*
 import ray.eldath.offgrid.util.*
+import ray.eldath.offgrid.util.ErrorCodes.AUTH_TOKEN_INVALID_OR_EXPIRED
 import ray.eldath.offgrid.util.ErrorCodes.INVALID_EMAIL_ADDRESS
 import ray.eldath.offgrid.util.ErrorCodes.TOKEN_EXPIRED
 import ray.eldath.offgrid.util.ErrorCodes.TOKEN_NOT_FOUND
@@ -38,7 +37,7 @@ import java.util.*
 
 
 class Login(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
-    data class LoginRequest(val email: String, val password: String) : EmailRequest(email)
+    data class LoginRequest(override val email: String, val password: String) : EmailRequest(email)
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class LoginResponse(val bearer: String, val expireIn: Long, val self: OutboundUser)
@@ -53,17 +52,24 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
         if (!EmailValidator.getInstance().isValid(email))
             throw INVALID_EMAIL_ADDRESS()
 
-        val either = runState(UserRegistrationStatus.fetchByEmail(email), plainPassword)
+        val currentBearer = req.bearerToken()
+        val current = currentBearer?.let { BearerSecurity.query(it) }
+
         val inbound =
-            if (either.haveLeft)
-                throw either.leftOrThrow()
-            else
-                either.rightOrThrow.rightOrThrow
+            if (current == null) {
+                if (currentBearer != null)
+                    throw AUTH_TOKEN_INVALID_OR_EXPIRED()
+
+                val either = runState(UserRegistrationStatus.fetchByEmail(email), plainPassword)
+                if (either.haveLeft)
+                    throw either.leftOrThrow()
+                else
+                    either.rightOrThrow.rightOrThrow
+            } else current
 
         val (user, auth, _) = inbound
 
-
-        val bearer = BearerSecurity.authorize(inbound)
+        val bearer = currentBearer ?: BearerSecurity.authorize(inbound)
         val self =
             user.run { OutboundUser(id, username, email, auth.role.toOutbound(), inbound.permissions.toOutbound()) }
 
@@ -81,6 +87,7 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
             returning(OK, responseLens to LoginResponse(UUID.randomUUID().toString(), expireIn, OutboundUser.mock))
             exception(
                 INVALID_EMAIL_ADDRESS,
+                AUTH_TOKEN_INVALID_OR_EXPIRED,
                 UNCONFIRMED_EMAIL,
                 USER_NOT_FOUND,
                 ErrorCodes.APPLICATION_PENDING,
@@ -115,7 +122,7 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
 class Logout(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
 
     private fun handler(): HttpHandler = { req ->
-        BearerSecurity.invalidate(req.bearerToken())
+        BearerSecurity.invalidate(req.safeBearerToken())
         Response(OK)
     }
 
@@ -131,7 +138,7 @@ class Logout(credentials: Credentials, optionalSecurity: Security) : ContractHan
 }
 
 class Register(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
-    data class RegisterRequest(val email: String) : EmailRequest(email)
+    data class RegisterRequest(override val email: String) : EmailRequest(email)
 
     private val handler: HttpHandler = { req: Request ->
         val email = requestLens(req).email
@@ -321,11 +328,4 @@ object ConfirmEmail {
         }
     }
 
-}
-
-open class EmailRequest(emailAddress: String?) {
-    init {
-        if (emailAddress != null && !EmailValidator.getInstance().isValid(emailAddress))
-            throw INVALID_EMAIL_ADDRESS()
-    }
 }

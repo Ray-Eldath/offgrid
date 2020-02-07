@@ -19,6 +19,7 @@ import ray.eldath.offgrid.generated.offgrid.tables.ResetPasswordApplications
 import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ResetPasswordApplication
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
+import ray.eldath.offgrid.model.EmailRequest
 import ray.eldath.offgrid.model.UrlToken
 import ray.eldath.offgrid.model.UsernamePassword
 import ray.eldath.offgrid.util.*
@@ -30,7 +31,7 @@ object ResetPassword {
     class Invoke(credentials: Credentials, optionalSecurity: Security) :
         ContractHandler(credentials, optionalSecurity) {
 
-        data class InvokeRequest(val email: String) : EmailRequest(email)
+        data class InvokeRequest(override val email: String) : EmailRequest(email)
 
         private val handler: HttpHandler = { req ->
             val json = requestLens(req)

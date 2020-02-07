@@ -6,7 +6,7 @@ import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
 import ray.eldath.offgrid.component.BearerSecurity
-import ray.eldath.offgrid.component.BearerSecurity.bearerToken
+import ray.eldath.offgrid.component.BearerSecurity.safeBearerToken
 import ray.eldath.offgrid.model.OutboundUser
 import ray.eldath.offgrid.model.toOutbound
 import ray.eldath.offgrid.util.RouteTag
@@ -46,7 +46,7 @@ class DeleteSelf(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
 
     private val handler: HttpHandler = { req ->
-        BearerSecurity.invalidate(req.bearerToken())
+        BearerSecurity.invalidate(req.safeBearerToken())
         DeleteUser.deleteUser(credentials(req).user.id)
 
         Response(Status.OK)

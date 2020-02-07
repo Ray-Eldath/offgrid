@@ -3,10 +3,7 @@ package ray.eldath.offgrid.component
 import com.github.benmanes.caffeine.cache.Caffeine
 import de.mkammerer.argon2.Argon2Factory
 import org.http4k.contract.security.Security
-import org.http4k.core.Filter
-import org.http4k.core.Request
-import org.http4k.core.RequestContexts
-import org.http4k.core.then
+import org.http4k.core.*
 import org.http4k.filter.ServerFilters
 import org.http4k.lens.RequestContextKey
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
@@ -65,19 +62,31 @@ object BearerSecurity : Security {
         caffeine.invalidate(bearer)
     }
 
+    fun query(bearer: String): InboundUser? = caffeine.getIfPresent(bearer)
+
     override val filter: Filter by lazy {
         ServerFilters.InitialiseRequestContext(contexts)
-            .then(ServerFilters.BearerAuth(credentials) {
-                caffeine.getIfPresent(it)
+            .then(Filter { next ->
+                {
+                    it.safeBearerToken()
+                        .let(::query)
+                        ?.let { found -> next(it.with(credentials of found)) }
+                        ?: throw LOGIN_REQUIRED()
+                }
             })
     }
 
-    fun Request.bearerToken(): String =
-        ((header("Authorization") ?: throw LOGIN_REQUIRED())
-            .trim()
-            .takeIf { it.startsWith("Bearer") } ?: throw commonBadRequest("malformed Bearer")())
-            .substringAfter("Bearer")
-            .trim()
+    fun Request.safeBearerToken(): String = bearerToken() ?: throw LOGIN_REQUIRED()
+
+    fun Request.bearerToken(): String? =
+        header("Authorization")
+            ?.trim()
+            ?.also {
+                if (!it.startsWith("Bearer"))
+                    throw commonBadRequest("malformed Bearer")()
+            }
+            ?.substringAfter("Bearer")
+            ?.trim()
 }
 
 object Argon2 {

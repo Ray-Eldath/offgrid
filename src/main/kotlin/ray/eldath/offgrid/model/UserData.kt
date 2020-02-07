@@ -37,6 +37,7 @@ data class UsernamePassword(val username: String, val password: String) {
 /**
  * @param permissions not extra permissions but all permissions
  */
+@JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
 data class OutboundUser(
     val id: Int,
     val username: String,
@@ -53,8 +54,7 @@ data class OutboundUser(
             "alpha.beta@omega.com",
             UserRole.Root.toOutbound(),
             UserRole.Root.defaultPermissions
-                .also { it.toMutableList().remove(Permission.ComputationResult) }
-                .toOutbound()
+                .also { it.toMutableList().remove(Permission.ComputationResult) }.toOutbound()
         )
     }
 }

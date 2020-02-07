@@ -53,14 +53,11 @@ class TestUser {
 
     @Nested
     inner class TestLogout {
-        private fun logout(bearer: String) =
-            Logout(credentials, security).compile()
-                .invoke("/logout".GET().header("Authorization", "Bearer $bearer"))
 
         @Test
         fun `test Security`() {
-            expectThat(logout(UUID.randomUUID().toString())).println().status()
-                .isEqualTo(Status.UNAUTHORIZED)
+            expectCatching { logout(UUID.randomUUID().toString()) }.failed()
+                .isEqualTo(ErrorCodes.LOGIN_REQUIRED()).println()
         }
 
         @Test
@@ -69,6 +66,11 @@ class TestUser {
             expectThat(logout(login.json()["bearer"].asText())).println().status()
                 .isEqualTo(Status.OK)
         }
+
+        private val route = Logout(credentials, security).compile()
+
+        private fun logout(bearer: String) =
+            route.invoke("/logout".GET().header("Authorization", "Bearer $bearer"))
     }
 
     @BeforeAll
