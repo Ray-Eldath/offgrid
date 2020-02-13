@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.apache.commons.validator.routines.EmailValidator
 import org.http4k.contract.ContractRoute
 import org.http4k.contract.RouteMetaDsl
 import org.http4k.contract.div
@@ -48,9 +47,6 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
         val json = requestLens(req)
         val email = json.email
         val plainPassword = json.password.toByteArray()
-
-        if (!EmailValidator.getInstance().isValid(email))
-            throw INVALID_EMAIL_ADDRESS()
 
         val currentBearer = req.bearerToken()
         val current = currentBearer?.let { BearerSecurity.query(it) }
@@ -327,5 +323,4 @@ object ConfirmEmail {
             fun generate(email: String) = ConfirmUrlToken(email, generateToken())
         }
     }
-
 }

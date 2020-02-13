@@ -30,6 +30,11 @@ object DirectEmailUtil {
         fromAlias: String = "[no reply] Offgrid User Center",
         textBody: () -> String
     ) = coroutineScope {
+        if (Core.debug) {
+            TestSuite.debug("email tagged $aliyunTag with subject $subject attempt send to $toAddress:\n${textBody()}")
+            return@coroutineScope
+        }
+
         fun warn(e: ClientException, type: String = "ClientException"): Unit =
             ("AliyunDirectMail: $type(errCode: ${e.errCode}) thrown when sendEmail to email address $toAddress " +
                     "with subject $subject and tag $aliyunTag").let {

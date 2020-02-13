@@ -28,7 +28,8 @@ import java.io.File
 
 
 object Core {
-    private var debug = false
+    var debug = false
+        private set
     val enableDebug: Boolean
         get() {
             debug = true
@@ -89,8 +90,8 @@ object Core {
                 .then(ServerFilters.Cors(CorsPolicy(listOf("*"), listOf("*"), Method.values().toList())))
                 .also {
                     System.err.println(
-                        "filter Cors with unsafe global permissive is installed. note that CORS may still needed " +
-                                "in production, but global permissive should definitely be limited to debug only."
+                        "filter CORS with unsafe global permissive is installed. note that CORS may still needed " +
+                                "through inverse proxy in production, but global permissive should be limited to debug only."
                     )
                 }
         } else Filter.NoOp)
@@ -130,7 +131,7 @@ object Core {
             seq.map { it.split("=") }
                 .filter { it.size >= 2 }
                 .forEach {
-                    System.setProperty("offgrid.env.${it[0]}", it.subList(1, it.size).joinToString(""))
+                    System.setProperty("offgrid.env.${it[0]}", it.drop(1).joinToString(""))
                 }
         }
     }
