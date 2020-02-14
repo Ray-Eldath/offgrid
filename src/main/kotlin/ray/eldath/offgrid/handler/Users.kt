@@ -30,8 +30,8 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
         Query.int().defaulted("pre_page", 20, "the size of elements that one page should contain.")
 
     private val idLens = Query.int().optional("id", "exact search by id")
-    private val emailLens = Query.string().optional("email", "fuzzy filtered by email")
-    private val usernameLens = Query.string().optional("username", "fuzzy filtered by username")
+    private val emailLens = Query.string().optional("email", "fuzzily filter by email")
+    private val usernameLens = Query.string().optional("username", "fuzzily filter by username")
     private val roleLens = Query.int().optional("role", "filter by user role")
     private val permissionLens = Query.string().optional("permission", "filter by permission id")
 
@@ -88,7 +88,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
                             )
                         }
                     }
-                }.limit(pageSize).offset((page - 1) * pageSize)
+                }.orderBy(u.ID).limit(pageSize).offset((page - 1) * pageSize)
                 .fetchGroups(
                     { it.into(u).into(User::class.java) },
                     { it.into(a).into(Authorization::class.java) })
@@ -199,7 +199,10 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
                     "Ray Edas",
                     "alpha.beta@omega.com",
                     UserRole.UserAdmin.id,
-                    listOf(Permission.ListUser.toExtraExchangeable(false), Permission.DeleteUser.toExtraExchangeable(true))
+                    listOf(
+                        Permission.ListUser.toExtraExchangeable(false),
+                        Permission.DeleteUser.toExtraExchangeable(true)
+                    )
                 )
             )
             returning(Status.OK to "specified user has been updated use given information.")

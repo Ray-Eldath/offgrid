@@ -53,6 +53,7 @@ object Core {
         allRoutes += ResetPassword.Verify(credentials, security)
         allRoutes += ResetPassword.Submit(credentials, security)
 
+        allRoutes += ListUserApplications(credentials, security)
         allRoutes += ApproveUserApplication(credentials, security)
         allRoutes += RejectUserApplication(credentials, security)
         allRoutes += ResetUserApplication(credentials, security)

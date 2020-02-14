@@ -11,8 +11,9 @@ enum class Permission(
     DeleteUser("U_D"),
     User("U", ListUser, ModifyUser, DeleteUser),
 
-    ApproveUserApplication("UA_A"),
-    RejectUserApplication("UA_R"),
+    ListUserApplication("UA_L"),
+    ApproveUserApplication("UA_A", ListUserApplication),
+    RejectUserApplication("UA_R", ListUserApplication),
     UserApplication("UA", ApproveUserApplication, RejectUserApplication),
 
     ListProviderRegistry("PR_L"),

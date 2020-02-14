@@ -12,6 +12,7 @@ import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
+import org.http4k.lens.Query
 import org.http4k.lens.int
 import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
@@ -27,6 +28,69 @@ import ray.eldath.offgrid.util.ErrorCodes.commonNotFound
 import ray.eldath.offgrid.util.Permission.Companion.expand
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
+
+class ListUserApplications(credentials: Credentials, optionalSecurity: Security) :
+    ContractHandler(credentials, optionalSecurity) {
+
+    private data class ListResponseEntry(val id: Int, val email: String, val username: String)
+    private data class ListResponse(val result: List<ListResponseEntry>)
+
+    private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
+    private val pageSizeLens =
+        Query.int().defaulted("pre_page", 20, "the size of elements that one page should contain.")
+
+    private val emailLens = Query.optional("email", "fuzzily filter by email")
+    private val usernameLens = Query.optional("username", "fuzzily filter by username")
+
+    private val handler: HttpHandler = { req ->
+        credentials(req).requirePermission(Permission.ListUserApplication)
+
+        val page = pageLens(req)
+        val pageSize = pageSizeLens(req)
+
+        val email = emailLens(req)
+        val username = usernameLens(req)
+
+        transaction {
+            val ua = UserApplications.USER_APPLICATIONS
+
+            selectDistinct(ua.fields().toMutableList())
+                .where("true")
+                .apply {
+                    if (email != null)
+                        and(ua.EMAIL.likeIgnoreCase("%$email%"))
+                    if (username != null)
+                        and(ua.USERNAME.likeIgnoreCase("%$username%"))
+
+                }.orderBy(ua.ID).limit(pageSize).offset((page - 1) * pageSize)
+                .fetch { it.into(ua).into(UserApplication::class.java) }
+
+        }.map { ListResponseEntry(it.id, it.email, it.username) }
+            .let { Response(Status.OK).with(responseLens of ListResponse(it)) }
+    }
+
+    override fun compile(): ContractRoute =
+        "/applications" meta {
+            summary = "Query register applications, ordered by id"
+            description = "Filter register applications with given predicates, note that none of them is required."
+            tags += RouteTag.UserApplication
+            security = optionalSecurity
+
+            queries += listOf(pageLens, pageSizeLens)
+
+            outJson()
+            returning(
+                Status.OK,
+                responseLens to ListResponse(
+                    listOf(ListResponseEntry(1, "alpha@beta.omega", "False Ray Eldath"))
+                )
+            )
+        } bindContract Method.GET to handler
+
+    companion object {
+        private val responseLens = Body.auto<ListResponse>().toLens()
+    }
+}
 
 class ApproveUserApplication(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
