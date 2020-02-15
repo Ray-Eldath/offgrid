@@ -82,7 +82,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
                         )
             }
 
-            val prefix = selectDistinct(u.EMAIL)
+            val prefix = selectDistinct(u.fields().toMutableList().also { it.addAll(a.fields()) })
                 .from(u)
                 .innerJoin(a).on(u.ID.eq(a.USER_ID))
                 .leftJoin(ep).on(ep.AUTHORIZATION_ID.eq(a.USER_ID))

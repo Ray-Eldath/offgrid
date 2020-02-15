@@ -64,7 +64,7 @@ class ListUserApplications(credentials: Credentials, optionalSecurity: Security)
 
             ListResponse(
                 total = selectCount().from(ua).where(conditions).fetchOne(0, Int::class.java),
-                result = selectDistinct(ua.EMAIL).from(ua).where(conditions)
+                result = selectDistinct(*ua.fields()).from(ua).where(conditions)
                     .orderBy(ua.ID).limit(pageSize).offset((page - 1) * pageSize)
                     .fetch { it.into(ua).into(UserApplication::class.java) }
                     .map { ListResponseEntry(it.id, it.email, it.username) }
