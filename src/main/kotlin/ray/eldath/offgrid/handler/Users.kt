@@ -12,6 +12,7 @@ import org.http4k.lens.Path
 import org.http4k.lens.Query
 import org.http4k.lens.int
 import org.http4k.lens.string
+import org.jooq.Condition
 import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.Users
@@ -23,7 +24,9 @@ import ray.eldath.offgrid.util.*
 
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
     data class ListResponseEntry(val id: Int, val username: String, val email: String, val role: OutboundRole)
-    data class ListResponse(val result: List<ListResponseEntry>)
+
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
+    data class ListResponse(val totalPage: Int, val result: List<ListResponseEntry>)
 
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
     private val pageSizeLens =
@@ -50,63 +53,63 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
         val permission = permissionPlain?.let { Permission.fromId(it) }
         val permissionRoles = permission?.let { UserRole.fromPermission(it) }?.toMutableList()
 
-        transaction<MutableMap<User, MutableList<Authorization>>?> {
+        transaction {
             val u = Users.USERS
             val a = Authorizations.AUTHORIZATIONS
             val ep = ExtraPermissions.EXTRA_PERMISSIONS
 
-            selectDistinct(u.fields().toMutableList().also { it.addAll(a.fields()) })
+            val conditions = arrayListOf<Condition>().also {
+                if (id != null)
+                    it += u.ID.eq(id)
+                if (email != null)
+                    it += u.EMAIL.likeIgnoreCase("%$email%")
+                if (username != null)
+                    it += u.USERNAME.likeIgnoreCase("%$username%")
+                if (role != null)
+                    it +=
+                        if (permissionRoles == null)
+                            a.ROLE.eq(role)
+                        else
+                            a.ROLE.`in`(permissionRoles.also { r -> r.add(role) })
+                if (permission != null)
+                    it +=
+                        a.ROLE.`in`(permissionRoles).and(
+                            ep.PERMISSION_ID.isNull.orNot(
+                                ep.PERMISSION_ID.eq(permission).and(ep.IS_SHIELD.isTrue)
+                            )
+                        ).or(
+                            ep.PERMISSION_ID.`in`(Permission.fromId(permission.rootId), permission).and(
+                                ep.IS_SHIELD.isFalse
+                            )
+                        )
+            }
+
+            val prefix = selectDistinct(u.EMAIL)
                 .from(u)
                 .innerJoin(a).on(u.ID.eq(a.USER_ID))
                 .leftJoin(ep).on(ep.AUTHORIZATION_ID.eq(a.USER_ID))
-                .where("true")
-                .apply {
-                    if (!allNull(id, email, username, role, permission)) {
-                        if (id != null)
-                            and(u.ID.eq(id))
-                        if (email != null)
-                            and(u.EMAIL.likeIgnoreCase("%$email%"))
-                        if (username != null)
-                            and(u.USERNAME.likeIgnoreCase("%$username%"))
-                        if (role != null) {
-                            if (permissionRoles == null)
-                                and(a.ROLE.eq(role))
-                            else
-                                and(a.ROLE.`in`(permissionRoles.also { it.add(role) }))
-                        }
-                        if (permission != null) {
-                            and(
-                                a.ROLE.`in`(permissionRoles).and(
-                                    ep.PERMISSION_ID.isNull.orNot(
-                                        ep.PERMISSION_ID.eq(permission).and(ep.IS_SHIELD.isTrue)
-                                    )
-                                ).or(
-                                    ep.PERMISSION_ID.`in`(Permission.fromId(permission.rootId), permission).and(
-                                        ep.IS_SHIELD.isFalse
-                                    )
-                                )
-                            )
-                        }
-                    }
-                }.orderBy(u.ID).limit(pageSize).offset((page - 1) * pageSize)
-                .fetchGroups(
-                    { it.into(u).into(User::class.java) },
-                    { it.into(a).into(Authorization::class.java) })
-        }?.filterValues { it.size == 1 }
-            ?.mapValues { it.value[0] }
-            .orEmpty()
-            .map { (user, auth) ->
-                ListResponseEntry(
-                    user.id,
-                    user.username,
-                    user.email,
-                    auth.role.toOutbound()
-                )
-            }
-            .let { Response(Status.OK).with(responseLens of ListResponse(it)) }
-    }
+                .where(conditions)
 
-    private fun allNull(vararg elements: Any?) = elements.all { it == null }
+            ListResponse(
+                totalPage = fetchCount(prefix).paged(pageSize),
+                result = prefix.orderBy(u.ID).limit(pageSize).offset((page - 1) * pageSize)
+                    .fetchGroups(
+                        { it.into(u).into(User::class.java) },
+                        { it.into(a).into(Authorization::class.java) })
+                    ?.filterValues { it.size == 1 }
+                    ?.mapValues { it.value[0] }
+                    .orEmpty()
+                    .map { (user, auth) ->
+                        ListResponseEntry(
+                            user.id,
+                            user.username,
+                            user.email,
+                            auth.role.toOutbound()
+                        )
+                    }
+            )
+        }.let { Response(Status.OK).with(responseLens of it) }
+    }
 
     override fun compile(): ContractRoute =
         "/users" meta {
@@ -121,6 +124,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
             returning(
                 Status.OK,
                 responseLens to ListResponse(
+                    1,
                     listOf(ListResponseEntry(30213, "Ray Eldath", "abc@omega.com", UserRole.Root.toOutbound()))
                 )
             )

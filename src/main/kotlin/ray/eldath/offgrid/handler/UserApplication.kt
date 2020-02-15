@@ -14,6 +14,7 @@ import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
 import org.http4k.lens.Query
 import org.http4k.lens.int
+import org.jooq.Condition
 import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
@@ -32,8 +33,10 @@ import java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
 class ListUserApplications(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
 
-    private data class ListResponseEntry(val id: Int, val email: String, val username: String)
-    private data class ListResponse(val result: List<ListResponseEntry>)
+    data class ListResponseEntry(val id: Int, val email: String, val username: String)
+
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
+    data class ListResponse(val totalPage: Int, val result: List<ListResponseEntry>)
 
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
     private val pageSizeLens =
@@ -54,19 +57,21 @@ class ListUserApplications(credentials: Credentials, optionalSecurity: Security)
         transaction {
             val ua = UserApplications.USER_APPLICATIONS
 
-            selectDistinct(ua.fields().toMutableList())
-                .where("true")
-                .apply {
-                    if (email != null)
-                        and(ua.EMAIL.likeIgnoreCase("%$email%"))
-                    if (username != null)
-                        and(ua.USERNAME.likeIgnoreCase("%$username%"))
+            val conditions = arrayListOf<Condition>().also {
+                if (email != null)
+                    it += ua.EMAIL.likeIgnoreCase("%$email%")
+                if (username != null)
+                    it += ua.USERNAME.likeIgnoreCase("%$username%")
+            }
 
-                }.orderBy(ua.ID).limit(pageSize).offset((page - 1) * pageSize)
-                .fetch { it.into(ua).into(UserApplication::class.java) }
-
-        }.map { ListResponseEntry(it.id, it.email, it.username) }
-            .let { Response(Status.OK).with(responseLens of ListResponse(it)) }
+            ListResponse(
+                totalPage = selectCount().from(ua).where(conditions).fetchOne(0, Int::class.java).paged(pageSize),
+                result = selectDistinct(ua.EMAIL).from(ua).where(conditions)
+                    .orderBy(ua.ID).limit(pageSize).offset((page - 1) * pageSize)
+                    .fetch { it.into(ua).into(UserApplication::class.java) }
+                    .map { ListResponseEntry(it.id, it.email, it.username) }
+            )
+        }.let { Response(Status.OK).with(responseLens of it) }
     }
 
     override fun compile(): ContractRoute =
@@ -76,12 +81,13 @@ class ListUserApplications(credentials: Credentials, optionalSecurity: Security)
             tags += RouteTag.UserApplication
             security = optionalSecurity
 
-            queries += listOf(pageLens, pageSizeLens)
+            queries += listOf(pageLens, pageSizeLens, emailLens, usernameLens)
 
             outJson()
             returning(
                 Status.OK,
                 responseLens to ListResponse(
+                    1,
                     listOf(ListResponseEntry(1, "alpha@beta.omega", "False Ray Eldath"))
                 )
             )

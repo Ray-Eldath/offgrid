@@ -9,5 +9,6 @@ object RouteTag {
 
     val ResetPassword = Tag("Request Password", "API consists procedure of resetting password.")
     val Self = Tag("Self", "Query or edit information of oneself.")
+
     val Users = Tag("Users", "Admin: list, modify, delete user(s).")
 }
