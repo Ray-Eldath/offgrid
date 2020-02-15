@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory
 import ray.eldath.offgrid.component.ApiExceptionHandler
 import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.handler.*
+import ray.eldath.offgrid.util.RouteTag
 import java.io.File
 
 
@@ -66,6 +67,7 @@ object Core {
         allRoutes += DeleteSelf(credentials, security)
 
         allRoutes += Echo(credentials, security)
+        allRoutes += Require(credentials, security)
     }
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.
@@ -115,7 +117,9 @@ object Core {
             ROOT bind contract {
                 renderer = globalRenderer
                 descriptionPath = descPath
-                routes += allRoutes.map { it.compile() }
+                routes += allRoutes
+                    .map { it.compile() }
+                    .let { r -> if (debug) r else r.filterNot { it.tags.contains(RouteTag.Debug) } }
                 preSecurityFilter = filterChain
             }
 
