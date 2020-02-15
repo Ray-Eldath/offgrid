@@ -24,9 +24,7 @@ import ray.eldath.offgrid.util.*
 
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
     data class ListResponseEntry(val id: Int, val username: String, val email: String, val role: OutboundRole)
-
-    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    data class ListResponse(val totalPage: Int, val result: List<ListResponseEntry>)
+    data class ListResponse(val total: Int, val result: List<ListResponseEntry>)
 
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
     private val pageSizeLens =
@@ -91,7 +89,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
                 .where(conditions)
 
             ListResponse(
-                totalPage = fetchCount(prefix).paged(pageSize),
+                total = fetchCount(prefix),
                 result = prefix.orderBy(u.ID).limit(pageSize).offset((page - 1) * pageSize)
                     .fetchGroups(
                         { it.into(u).into(User::class.java) },

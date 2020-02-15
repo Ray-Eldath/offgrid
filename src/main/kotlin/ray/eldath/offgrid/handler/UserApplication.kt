@@ -34,9 +34,7 @@ class ListUserApplications(credentials: Credentials, optionalSecurity: Security)
     ContractHandler(credentials, optionalSecurity) {
 
     data class ListResponseEntry(val id: Int, val email: String, val username: String)
-
-    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    data class ListResponse(val totalPage: Int, val result: List<ListResponseEntry>)
+    data class ListResponse(val total: Int, val result: List<ListResponseEntry>)
 
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
     private val pageSizeLens =
@@ -65,7 +63,7 @@ class ListUserApplications(credentials: Credentials, optionalSecurity: Security)
             }
 
             ListResponse(
-                totalPage = selectCount().from(ua).where(conditions).fetchOne(0, Int::class.java).paged(pageSize),
+                total = selectCount().from(ua).where(conditions).fetchOne(0, Int::class.java),
                 result = selectDistinct(ua.EMAIL).from(ua).where(conditions)
                     .orderBy(ua.ID).limit(pageSize).offset((page - 1) * pageSize)
                     .fetch { it.into(ua).into(UserApplication::class.java) }
