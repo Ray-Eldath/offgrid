@@ -12,5 +12,6 @@ object RouteTag {
 
     val Users = Tag("Users", "Admin: list, modify, delete user(s).")
 
+    val Meta = Tag("Meta", "Metadata of the system, like all available user roles, permissions, etc.")
     val Debug = Tag("Debug", "Only for debug purpose, so only enabled in debug mode.")
 }

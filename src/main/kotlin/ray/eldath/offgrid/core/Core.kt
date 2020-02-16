@@ -66,6 +66,8 @@ object Core {
         allRoutes += Self(credentials, security)
         allRoutes += DeleteSelf(credentials, security)
 
+        allRoutes += MetaUserRoles(credentials, security)
+
         allRoutes += Echo(credentials, security)
         allRoutes += Require(credentials, security)
     }

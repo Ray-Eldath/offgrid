@@ -33,7 +33,14 @@ import java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
 class ListUserApplications(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
 
-    data class ListResponseEntry(val id: Int, val email: String, val username: String)
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
+    data class ListResponseEntry(
+        val id: Int,
+        val email: String,
+        val username: String,
+        val isApplicationPending: Boolean = true
+    )
+
     data class ListResponse(val total: Int, val result: List<ListResponseEntry>)
 
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
@@ -67,7 +74,7 @@ class ListUserApplications(credentials: Credentials, optionalSecurity: Security)
                 result = selectDistinct(*ua.fields()).from(ua).where(conditions)
                     .orderBy(ua.ID).limit(pageSize).offset((page - 1) * pageSize)
                     .fetch { it.into(ua).into(UserApplication::class.java) }
-                    .map { ListResponseEntry(it.id, it.email, it.username) }
+                    .map { ListResponseEntry(it.id, it.email, it.username, it.isApplicationPending) }
             )
         }.let { Response(Status.OK).with(responseLens of it) }
     }
