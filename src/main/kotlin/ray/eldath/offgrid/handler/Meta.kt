@@ -22,7 +22,12 @@ class MetaUserRoles(credentials: Credentials, optionalSecurity: Security) :
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class RolesEntry(val role: OutboundRole, val defaultPermissions: List<OutboundPermission>)
 
-    data class RolesResponse(val permissions: List<OutboundTreePermission>?, val roles: List<RolesEntry>)
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
+    data class RolesResponse(
+        val treePermissions: List<OutboundTreePermission>?,
+        val flattenPermissions: List<OutboundPermission>?,
+        val roles: List<RolesEntry>
+    )
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     data class OutboundTreePermission(
@@ -55,7 +60,8 @@ class MetaUserRoles(credentials: Credentials, optionalSecurity: Security) :
 
             Response(Status.OK).with(
                 Body.auto<RolesResponse>().toLens() of RolesResponse(
-                    permissions = Permission.Root.toTree().children,
+                    treePermissions = Permission.Root.toTree().children,
+                    flattenPermissions = Permission.values().map { OutboundPermission(it.id, it.name) },
                     roles = UserRole.values().map {
                         RolesEntry(
                             OutboundRole(it.id, it.name),

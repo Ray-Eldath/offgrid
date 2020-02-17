@@ -69,3 +69,6 @@ create table Reset_Password_Applications
 
 alter table Users
     auto_increment = 1000;
+
+alter table User_Applications
+    auto_increment = 1000;
