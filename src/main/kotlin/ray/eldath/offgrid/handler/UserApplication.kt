@@ -125,6 +125,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
 
             val application = UserApplicationHandler.getByIdChecked(id)
             val user = newRecord(Users.USERS).apply {
+                state = UserState.Normal
                 username = application.username
                 email = application.email
             }
@@ -134,6 +135,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
                 userId = user.id
                 hashedPassword = application.hashedPassword
                 this.role = role
+                registerTime = LocalDateTime.now()
             }
             authorization.insert()
 

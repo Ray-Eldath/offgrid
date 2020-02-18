@@ -19,10 +19,13 @@ class Self(credentials: Credentials, optionalSecurity: Security) :
         credentials(req).run {
             OutboundUser(
                 user.id,
+                user.state.id,
                 user.username,
                 user.email,
                 authorization.role.toOutbound(),
-                permissions.toOutbound()
+                permissions.toOutbound(),
+                lastLoginTime = authorization.lastLoginTime,
+                registerTime = authorization.registerTime
             )
         }.let { Response(Status.OK).with(responseLens of it) }
     }

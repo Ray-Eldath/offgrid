@@ -28,13 +28,20 @@ jooq {
                         userType = 'ray.eldath.offgrid.util.Permission'
                         converter = 'ray.eldath.offgrid.util.PermissionConverter'
                         includeExpression = '.*\\.*permission.*'
-                        includeTypes = 'varchar\\(5\\)'
+                        includeTypes = 'VARCHAR\\(5\\)'
                     }
 
                     forcedType {
                         userType = 'ray.eldath.offgrid.util.UserRole'
                         converter = 'ray.eldath.offgrid.util.UserRoleConverter'
-                        includeExpression = '.*\\.role.*'
+                        includeExpression = '.*\\.*role.*'
+                        includeTypes = 'INT(UNSIGNED)?'
+                    }
+
+                    forcedType {
+                        userType = 'ray.eldath.offgrid.util.UserState'
+                        converter = 'ray.eldath.offgrid.util.UserStateConverter'
+                        includeExpression = '[Uu]sers\\.*state.*'
                         includeTypes = 'INT(UNSIGNED)?'
                     }
                 }

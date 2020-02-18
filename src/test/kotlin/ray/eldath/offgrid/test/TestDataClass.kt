@@ -28,6 +28,7 @@ import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.failed
 import strikt.assertions.isEqualTo
 import strikt.assertions.succeeded
+import java.time.LocalDateTime
 
 class TestDataClass {
 
@@ -36,8 +37,8 @@ class TestDataClass {
 
         @Test
         fun `test single permission expand`() {
-            expectThat(ApproveUserApplication.expand())
-                .containsExactlyInAnyOrder(ApproveUserApplication)
+            expectThat(ListUserApplication.expand())
+                .containsExactlyInAnyOrder(ListUserApplication)
         }
 
         @Test
@@ -85,7 +86,8 @@ class TestDataClass {
 
         @Test
         fun `test success requirePermission`() {
-            val auth = Authorization(1, hashedPassword, UserRole.MetricsAdmin)
+            val now = LocalDateTime.now()
+            val auth = Authorization(1, hashedPassword, UserRole.MetricsAdmin, now, now)
             val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, false)))
 
             expectCatching { inbound.requirePermission(ListUser, DeleteUser, User) }.succeeded().println()

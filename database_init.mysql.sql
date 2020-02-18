@@ -28,8 +28,9 @@ create table Users
 (
     id       int auto_increment
         primary key,
-    username varchar(20) not null,
-    email    varchar(50) not null,
+    state    tinyint default 0 not null,
+    username varchar(20)       not null,
+    email    varchar(50)       not null,
     constraint Users_email_unique
         unique (email)
 );
@@ -40,6 +41,8 @@ create table Authorizations
         primary key,
     hashed_password varchar(150) not null,
     role            int          not null,
+    last_login_time datetime     null,
+    register_time   datetime     null,
     constraint fk_Authorizations_user_id_id
         foreign key (user_id) references Users (id)
             on delete cascade

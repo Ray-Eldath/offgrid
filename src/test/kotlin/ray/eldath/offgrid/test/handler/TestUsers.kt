@@ -49,7 +49,7 @@ class TestUsers {
         @Test
         fun `list by email fuzzily`() {
             resp(listUsers(request("email" to "alpha.com")))
-                .containsExactlyInAnyOrder("Ray Eldath", "bar foo")
+                .containsExactlyInAnyOrder("offgrid test", "bar foo")
         }
 
         @Test
@@ -61,13 +61,13 @@ class TestUsers {
         @Test
         fun `list by permission`() {
             resp(listUsers(request("permission" to Permission.RejectUserApplication.id)))
-                .containsExactlyInAnyOrder("Ray Eldath", "bar foo")
+                .containsExactlyInAnyOrder("offgrid test", "bar foo")
 
             resp(listUsers(request("permission" to Permission.AllProviderMetrics.id)))
-                .containsExactlyInAnyOrder("Ray Eldath", "foo bar", "bar foo")
+                .containsExactlyInAnyOrder("offgrid test", "foo bar", "bar foo")
 
             resp(listUsers(request("permission" to Permission.User.id)))
-                .containsExactlyInAnyOrder("Ray Eldath", "www")
+                .containsExactlyInAnyOrder("offgrid test", "www")
         }
 
         private fun request(vararg queries: Pair<String, String>) =
@@ -83,7 +83,7 @@ class TestUsers {
     }
 
     private val usernameEmail = mapOf(
-        "Ray Eldath" to "omega@alpha.com",
+        "offgrid test" to "omega@alpha.com",
         "foo bar" to "alpha@omega.com",
         "bar foo" to "beta@alpha.com",
         "www" to "alpha@beta.com"

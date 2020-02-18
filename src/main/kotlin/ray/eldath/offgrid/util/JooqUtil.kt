@@ -30,3 +30,12 @@ class UserRoleConverter : Converter<Int, UserRole> {
     override fun fromType(): Class<Int> = Int::class.java
     override fun toType(): Class<UserRole> = UserRole::class.java
 }
+
+class UserStateConverter : Converter<Int, UserState> {
+
+    override fun from(databaseObject: Int): UserState = UserState.fromId(databaseObject)
+    override fun to(userObject: UserState): Int = userObject.id
+
+    override fun fromType(): Class<Int> = Int::class.java
+    override fun toType(): Class<UserState> = UserState::class.java
+}

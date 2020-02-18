@@ -26,19 +26,19 @@ class TestUser {
 
         @Test
         fun `malformed email address`() {
-            expectCatching { login("alpha.beta@omega", "") }.failed()
+            expectCatching { login("test@offgrid", "") }.failed()
                 .isEqualTo(ErrorCodes.INVALID_EMAIL_ADDRESS()).println()
         }
 
         @Test
         fun `wrong user email address`() {
-            expectCatching { login("alpha.beta@omega.com", "123") }.failed()
+            expectCatching { login("test@offgrid.org", "123") }.failed()
                 .isEqualTo(ErrorCodes.USER_NOT_FOUND()).println()
         }
 
         @Test
         fun `wrong user password`() {
-            expectCatching { login("alpha@beta.omega", "1234") }.failed()
+            expectCatching { login("test@offgrid.ray-eldath.me", "1234") }.failed()
                 .isEqualTo(ErrorCodes.USER_NOT_FOUND()).println()
         }
 
@@ -48,7 +48,7 @@ class TestUser {
                 .isEqualTo(Status.OK)
         }
 
-        fun success() = login("alpha@beta.omega", "123")
+        fun success() = login("test@offgrid.ray-eldath.me", "123")
     }
 
     @Nested

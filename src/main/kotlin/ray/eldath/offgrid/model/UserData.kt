@@ -6,6 +6,8 @@ import ray.eldath.offgrid.component.Md5
 import ray.eldath.offgrid.util.ErrorCodes
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
+import ray.eldath.offgrid.util.UserState
+import java.time.LocalDateTime
 
 data class UsernamePassword(val username: String, val password: String) {
     companion object {
@@ -40,21 +42,27 @@ data class UsernamePassword(val username: String, val password: String) {
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
 data class OutboundUser(
     val id: Int,
+    val state: Int,
     val username: String,
     val email: String,
     val role: OutboundRole,
     val permissions: Collection<OutboundPermission>,
+    val lastLoginTime: LocalDateTime? = null,
+    val registerTime: LocalDateTime? = null,
     val avatarUrl: String = "https://cdn.v2ex.com/gravatar/${Md5.hash(email)}.jpg?r=g&d=retro&s=200"
 ) {
 
     companion object {
         val mock = OutboundUser(
             345142,
+            UserState.Normal.id,
             "Ray Eldath",
             "alpha.beta@omega.com",
             UserRole.Root.toOutbound(),
             UserRole.Root.defaultPermissions
-                .also { it.toMutableList().remove(Permission.ComputationResult) }.toOutbound()
+                .also { it.toMutableList().remove(Permission.ComputationResult) }.toOutbound(),
+            LocalDateTime.now().minusMinutes(13),
+            LocalDateTime.now().minusMonths(1)
         )
     }
 }

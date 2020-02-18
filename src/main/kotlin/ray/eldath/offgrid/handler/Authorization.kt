@@ -11,10 +11,12 @@ import ray.eldath.offgrid.component.*
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.BearerSecurity.bearerToken
 import ray.eldath.offgrid.component.BearerSecurity.safeBearerToken
+import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.model.EmailRequest
 import ray.eldath.offgrid.model.OutboundUser
 import ray.eldath.offgrid.model.toOutbound
 import ray.eldath.offgrid.util.*
+import java.time.LocalDateTime
 import java.util.*
 
 class Login(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
@@ -41,7 +43,8 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
                 val either = runState(
                     UserRegistrationStatus.fetchByEmail(
                         email
-                    ), plainPassword)
+                    ), plainPassword
+                )
                 if (either.haveLeft)
                     throw either.leftOrThrow()
                 else
@@ -50,15 +53,27 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
 
         val (user, auth, _) = inbound
 
+        transaction {
+            val a = Authorizations.AUTHORIZATIONS
+
+            update(a)
+                .set(a.LAST_LOGIN_TIME, LocalDateTime.now())
+                .where(a.USER_ID.eq(user.id))
+                .execute()
+        }
+
         val bearer = currentBearer ?: BearerSecurity.authorize(inbound)
         val self =
             user.run {
                 OutboundUser(
                     id,
+                    user.state.id,
                     username,
                     email,
                     auth.role.toOutbound(),
-                    inbound.permissions.toOutbound()
+                    inbound.permissions.toOutbound(),
+                    lastLoginTime = auth.lastLoginTime,
+                    registerTime = auth.registerTime
                 )
             }
 
@@ -78,7 +93,8 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
                 Status.OK, responseLens to LoginResponse(
                     UUID.randomUUID().toString(), expireIn,
                     OutboundUser.mock
-                ))
+                )
+            )
             exception(
                 ErrorCodes.INVALID_EMAIL_ADDRESS,
                 ErrorCodes.AUTH_TOKEN_INVALID_OR_EXPIRED,

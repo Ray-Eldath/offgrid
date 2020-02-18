@@ -36,8 +36,8 @@ object TestDatabase {
     fun `insert test data`() {
         transaction {
             val user = newRecord(USERS).apply {
-                username = "Ray Eldath"
-                email = "alpha@beta.omega"
+                username = "offgrid test"
+                email = "test@offgrid.ray-eldath.me"
             }
             user.store()
             val executed = user.id
@@ -73,7 +73,7 @@ object TestDatabase {
 
     @Test
     fun `select User join Authorization and ExtraPermission`() {
-        val (topLeft, topRight) = UserRegistrationStatus.fetchByEmail("alpha@beta.omega")
+        val (topLeft, topRight) = UserRegistrationStatus.fetchByEmail("test@offgrid.ray-eldath.me")
 
         expect {
             expectThat(topLeft).isNull()
@@ -85,7 +85,7 @@ object TestDatabase {
                 val (user, auth, list) = topRight.rightOrThrow
                 val authId = auth.userId
 
-                that(user.email).isEqualTo("alpha@beta.omega")
+                that(user.email).isEqualTo("test@offgrid.ray-eldath.me")
                 that(auth.role).isEqualTo(UserRole.Root)
                 that(list).containsExactlyInAnyOrder(
                     ExtraPermission(authId, Permission.ComputationResult, true),
@@ -99,7 +99,7 @@ object TestDatabase {
     fun `delete test data`() {
         transaction {
             delete(USERS)
-                .where(USERS.USERNAME.eq("Ray Eldath"))
+                .where(USERS.USERNAME.eq("offgrid test"))
                 .execute()
         }
         println("delete test data successfully")
