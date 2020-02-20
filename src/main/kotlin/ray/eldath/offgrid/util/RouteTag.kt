@@ -10,7 +10,7 @@ object RouteTag {
     val ResetPassword = Tag("Request Password", "API consists procedure of resetting password.")
     val Self = Tag("Self", "Query or edit information of oneself.")
 
-    val Users = Tag("Users", "Admin: list, modify, delete user(s).")
+    val Users = Tag("Users", "Admin: list, modify, ban and unban, delete user(s).")
 
     val Meta = Tag("Meta", "Metadata of the system, like all available user roles, permissions, etc.")
     val Debug = Tag("Debug", "Only for debug purpose, so only enabled in debug mode.")

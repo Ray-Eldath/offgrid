@@ -82,6 +82,7 @@ data class InboundExtraPermission(val id: String, val isShield: Boolean) {
 }
 
 data class OutboundRole(val id: Int, val name: String)
+data class OutboundState(val id: Int, val name: String)
 
 fun Permission.toExtraExchangeable(isShield: Boolean) = InboundExtraPermission(id, isShield)
 

@@ -61,12 +61,14 @@ object Core {
 
         allRoutes += ListUsers(credentials, security)
         allRoutes += ModifyUser(credentials, security)
+        allRoutes += BanUser(credentials, security)
+        allRoutes += UnbanUser(credentials, security)
         allRoutes += DeleteUser(credentials, security)
 
         allRoutes += Self(credentials, security)
         allRoutes += DeleteSelf(credentials, security)
 
-        allRoutes += MetaUserRoles(credentials, security)
+        allRoutes += MetaUserModel(credentials, security)
 
         allRoutes += Echo(credentials, security)
         allRoutes += Require(credentials, security)

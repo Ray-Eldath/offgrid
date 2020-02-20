@@ -53,6 +53,9 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
 
         val (user, auth, _) = inbound
 
+        if (user.state == UserState.Banned)
+            throw ErrorCodes.USER_HAS_BEEN_BANNED()
+
         transaction {
             val a = Authorizations.AUTHORIZATIONS
 

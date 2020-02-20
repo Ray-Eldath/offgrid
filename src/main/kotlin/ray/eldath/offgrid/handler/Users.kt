@@ -1,5 +1,6 @@
 package ray.eldath.offgrid.handler
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming
 import org.http4k.contract.ContractRoute
@@ -21,9 +22,21 @@ import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.handler.UsersHandler.checkUserId
 import ray.eldath.offgrid.model.*
 import ray.eldath.offgrid.util.*
+import java.time.LocalDateTime
 
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
-    data class ListResponseEntry(val id: Int, val username: String, val email: String, val role: OutboundRole)
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    data class ListResponseEntry(
+        val id: Int,
+        val state: Int,
+        val username: String,
+        val email: String,
+        val role: OutboundRole,
+        val lastLoginTime: LocalDateTime?,
+        val registerTime: LocalDateTime?
+    )
+
     data class ListResponse(val total: Int, val result: List<ListResponseEntry>)
 
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
@@ -31,6 +44,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
         Query.int().defaulted("pre_page", 20, "the size of elements that one page should contain.")
 
     private val idLens = Query.int().optional("id", "exact search by id")
+    private val stateLens = Query.int().optional("state", "exact search by user state id")
     private val emailLens = Query.string().optional("email", "fuzzily filter by email")
     private val usernameLens = Query.string().optional("username", "fuzzily filter by username")
     private val roleLens = Query.int().optional("role", "filter by user role")
@@ -43,6 +57,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
         val pageSize = pageSizeLens(req)
 
         val id = idLens(req)
+        val state = stateLens(req)?.let { UserState.fromId(it) }
         val email = emailLens(req)
         val username = usernameLens(req)
         val role = roleLens(req)?.let { UserRole.fromId(it) }
@@ -59,6 +74,8 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
             val conditions = arrayListOf<Condition>().also {
                 if (id != null)
                     it += u.ID.eq(id)
+                if (state != null)
+                    it += u.STATE.eq(state)
                 if (email != null)
                     it += u.EMAIL.likeIgnoreCase("%$email%")
                 if (username != null)
@@ -100,9 +117,12 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
                     .map { (user, auth) ->
                         ListResponseEntry(
                             user.id,
+                            user.state.id,
                             user.username,
                             user.email,
-                            auth.role.toOutbound()
+                            auth.role.toOutbound(),
+                            lastLoginTime = auth.lastLoginTime,
+                            registerTime = auth.registerTime
                         )
                     }
             )
@@ -116,14 +136,16 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
             tags += RouteTag.Users
             security = optionalSecurity
 
-            queries += listOf(pageLens, pageSizeLens, idLens, emailLens, usernameLens, roleLens, permissionLens)
+            queries +=
+                listOf(pageLens, pageSizeLens, idLens, stateLens, emailLens, usernameLens, roleLens, permissionLens)
 
             produces += ContentType.APPLICATION_JSON
             returning(
                 Status.OK,
                 responseLens to ListResponse(
                     1,
-                    listOf(ListResponseEntry(30213, "Ray Eldath", "abc@omega.com", UserRole.Root.toOutbound()))
+                    listOf(OutboundUser.mock
+                        .run { ListResponseEntry(id, state, username, email, role, lastLoginTime, registerTime) })
                 )
             )
         } bindContract Method.GET to handler
@@ -215,6 +237,68 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
     }
 }
 
+class BanUser(credentials: Credentials, optionalSecurity: Security) :
+    ContractHandler(credentials, optionalSecurity) {
+
+    private fun handler(userId: Int, useless: String): HttpHandler = {
+        credentials(it).requirePermission(Permission.ModifyUser)
+        val user = checkUserId(userId)
+
+        transaction {
+            val u = Users.USERS
+
+            update(u)
+                .set(u.STATE, UserState.Banned)
+                .where(u.ID.eq(user.id))
+                .execute()
+        }
+
+        Response(Status.OK)
+    }
+
+    override fun compile(): ContractRoute =
+        "/users" / Path.int().of("id", "id of the user") / "ban" meta {
+            summary = "Ban user"
+            tags += RouteTag.Users
+
+            security = optionalSecurity
+            returning(Status.OK to "specified user has been banned.")
+        } bindContract Method.GET to ::handler
+}
+
+class UnbanUser(credentials: Credentials, optionalSecurity: Security) :
+    ContractHandler(credentials, optionalSecurity) {
+
+    private fun handler(userId: Int, useless: String): HttpHandler = {
+        credentials(it).requirePermission(Permission.ModifyUser)
+        val user = checkUserId(userId)
+
+        if (user.state == UserState.Banned)
+            transaction {
+                val u = Users.USERS
+
+                update(u)
+                    .set(u.STATE, UserState.Normal)
+                    .where(u.ID.eq(user.id))
+                    .execute()
+            }
+
+        Response(Status.OK)
+    }
+
+    override fun compile(): ContractRoute =
+        "/users" / Path.int().of("id", "id of the user") / "unban" meta {
+            summary = "Unban the banned user"
+            tags += RouteTag.Users
+
+            security = optionalSecurity
+            returning(
+                Status.OK to "specified user has been unbanned, if banned beforehand, note that if not so, " +
+                        "200 will still be returned anyway."
+            )
+        } bindContract Method.GET to ::handler
+}
+
 class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
 
@@ -248,13 +332,13 @@ class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
 
 object UsersHandler {
 
-    fun checkUserId(userId: Int) {
+    fun checkUserId(userId: Int): User =
         transaction {
             val u = Users.USERS
             select()
                 .from(u)
                 .where(u.ID.eq(userId))
-                .fetchOptional().orElseThrow { ErrorCodes.commonNotFound()() }
+                .fetchOptional { it.into(u).into(User::class.java) }
+                .orElseThrow { ErrorCodes.commonNotFound()() }
         }
-    }
 }

@@ -10,20 +10,19 @@ import org.http4k.core.*
 import org.http4k.format.Jackson.auto
 import ray.eldath.offgrid.model.OutboundPermission
 import ray.eldath.offgrid.model.OutboundRole
+import ray.eldath.offgrid.model.OutboundState
 import ray.eldath.offgrid.model.toOutbound
-import ray.eldath.offgrid.util.Permission
-import ray.eldath.offgrid.util.RouteTag
-import ray.eldath.offgrid.util.UserRole
-import ray.eldath.offgrid.util.outJson
+import ray.eldath.offgrid.util.*
 
-class MetaUserRoles(credentials: Credentials, optionalSecurity: Security) :
+class MetaUserModel(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class RolesEntry(val role: OutboundRole, val defaultPermissions: List<OutboundPermission>)
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    data class RolesResponse(
+    data class UserModelResponse(
+        val userStates: List<OutboundState>,
         val treePermissions: List<OutboundTreePermission>?,
         val flattenPermissions: List<OutboundPermission>?,
         val roles: List<RolesEntry>
@@ -37,8 +36,11 @@ class MetaUserRoles(credentials: Credentials, optionalSecurity: Security) :
     )
 
     override fun compile(): ContractRoute =
-        "/meta/roles" meta {
-            summary = "Get all permissions and roles"
+        "/meta/model/user" meta {
+            summary = "Get user-related meta model"
+            description =
+                "Currently consisted of user-related enumeration used for modeling user, like all available" +
+                        " permissions, roles and user states."
             tags += RouteTag.Meta
             security = optionalSecurity
             outJson()
@@ -59,7 +61,8 @@ class MetaUserRoles(credentials: Credentials, optionalSecurity: Security) :
             }
 
             Response(Status.OK).with(
-                Body.auto<RolesResponse>().toLens() of RolesResponse(
+                Body.auto<UserModelResponse>().toLens() of UserModelResponse(
+                    userStates = UserState.values().map { OutboundState(it.id, it.name) },
                     treePermissions = Permission.Root.toTree().children,
                     flattenPermissions = Permission.values().map { OutboundPermission(it.id, it.name) },
                     roles = UserRole.values().map {
