@@ -64,7 +64,7 @@ enum class Permission(
 
         fun Array<out Permission>.expand(): List<Permission> = flatMap { it.expand() }.distinct()
 
-        fun List<Permission>.expand(): List<Permission> = flatMap { it.expand() }.distinct()
+        fun Collection<Permission>.expand(): List<Permission> = flatMap { it.expand() }.distinct()
     }
 }
 

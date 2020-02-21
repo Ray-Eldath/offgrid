@@ -5,9 +5,9 @@ import java.util.*
 data class Either<out L, out R>(val left: L?, val right: R?) {
 
     val leftOrThrow: L
-        get() = left ?: throw NullPointerException("left value of $this is unset")
+        get() = leftOrThrow { NullPointerException("left value of $this is unset") }
     val rightOrThrow: R
-        get() = right ?: throw NullPointerException("right value of $this is unset")
+        get() = rightOrThrow { NullPointerException("right value of $this is unset") }
 
     val notHaveLeft: Boolean
         get() = left == null
@@ -17,6 +17,9 @@ data class Either<out L, out R>(val left: L?, val right: R?) {
         get() = left != null
     val haveRight: Boolean
         get() = right != null
+
+    inline fun rightOrThrow(exception: () -> Exception): R = right ?: throw exception()
+    inline fun leftOrThrow(exception: () -> Exception): L = left ?: throw  exception()
 
     fun <A, B> map(mapper: (L?, R?) -> Either<A?, B?>) = mapper(left, right)
 

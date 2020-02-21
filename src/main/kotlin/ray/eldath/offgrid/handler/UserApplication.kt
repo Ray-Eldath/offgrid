@@ -115,10 +115,21 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
     }
 
     private fun handler(id: Int, useless: String): HttpHandler = { req ->
-        credentials(req).requirePermission(Permission.ApproveUserApplication)
+        val c = credentials(req)
+        c.requirePermission(Permission.ApproveUserApplication)
 
         val json = requestLens(req)
         val role = UserRole.fromId(json.roleId)
+        val ep = json.extraPermissions.orEmpty()
+
+        if (role.defaultPermissions.expand().toMutableList().apply {
+                addAll(
+                    ep.filterNot { it.isShield }
+                        .mapNotNull { Permission.fromId(it.id) }.expand()
+                )
+            }.any { !c.permissions.contains(it) }
+        )
+            throw ErrorCodes.CREATE_SURPASS_USER()
 
         transaction {
             val ua = UserApplications.USER_APPLICATIONS
@@ -139,7 +150,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
             }
             authorization.insert()
 
-            json.extraPermissions.orEmpty().map {
+            ep.map {
                 newRecord(ExtraPermissions.EXTRA_PERMISSIONS).apply {
                     authorizationId = authorization.userId
                     permissionId = Permission.fromId(it.id)

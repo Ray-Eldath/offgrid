@@ -49,8 +49,9 @@ class DeleteSelf(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
 
     private val handler: HttpHandler = { req ->
+        val self = credentials(req)
         BearerSecurity.invalidate(req.safeBearerToken())
-        DeleteUser.deleteUser(credentials(req).user.id)
+        DeleteUser.deleteUser(self.user.id)
 
         Response(Status.OK)
     }

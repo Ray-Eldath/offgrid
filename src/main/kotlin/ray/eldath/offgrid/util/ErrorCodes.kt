@@ -49,6 +49,11 @@ object ErrorCodes {
 
     val TOKEN_EXPIRED = ErrorCode(314, "given token has expired, try to request a new token.", FORBIDDEN)
 
+    val CREATE_SURPASS_USER =
+        ErrorCode(320, "can not create user that has some permissions you do not have", FORBIDDEN)
+    val DELETE_SURPASS_USER = ErrorCode(321, "can not delete user that has some permissions you do not have", FORBIDDEN)
+    val DELETE_SELF = ErrorCode(322, "can not delete yourself through user management API", FORBIDDEN)
+
 
     // 4: not found
     fun commonNotFound(message: String = "given entity is not found") = ErrorCode(400, message, NOT_FOUND)

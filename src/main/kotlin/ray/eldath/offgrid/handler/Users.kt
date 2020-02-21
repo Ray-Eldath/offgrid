@@ -14,6 +14,7 @@ import org.http4k.lens.Query
 import org.http4k.lens.int
 import org.http4k.lens.string
 import org.jooq.Condition
+import ray.eldath.offgrid.component.UserRegistrationStatus.Companion.fetchByEmail
 import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.Users
@@ -22,6 +23,8 @@ import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.handler.UsersHandler.checkUserId
 import ray.eldath.offgrid.model.*
 import ray.eldath.offgrid.util.*
+import ray.eldath.offgrid.util.ErrorCodes.commonNotFound
+import ray.eldath.offgrid.util.Permission.Companion.expand
 import java.time.LocalDateTime
 
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
@@ -302,9 +305,21 @@ class UnbanUser(credentials: Credentials, optionalSecurity: Security) :
 class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
     ContractHandler(credentials, optionalSecurity) {
 
-    private fun handler(userId: Int): HttpHandler = {
-        credentials(it).requirePermission(Permission.DeleteUser)
-        checkUserId(userId)
+    private fun handler(userId: Int): HttpHandler = { req ->
+        val self = credentials(req)
+        self.requirePermission(Permission.DeleteUser)
+
+        val notFound = commonNotFound()()
+        val userEmail = checkUserId(userId).email
+        if (fetchByEmail(userEmail)
+                .rightOrThrow { notFound }.rightOrThrow { notFound }.permissions.expand()
+                .any { !self.permissions.contains(it) }
+        )
+            throw ErrorCodes.DELETE_SURPASS_USER()
+
+        if (userEmail == self.user.email)
+            throw ErrorCodes.DELETE_SELF()
+
         deleteUser(userId)
 
         Response(Status.OK)
@@ -324,7 +339,8 @@ class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
         fun deleteUser(userId: Int) {
             transaction {
                 val u = Users.USERS
-                delete(u).where(u.ID.eq(userId)) // cascade deletion
+                delete(u)
+                    .where(u.ID.eq(userId)).execute() // cascade deletion
             }
         }
     }
@@ -339,6 +355,6 @@ object UsersHandler {
                 .from(u)
                 .where(u.ID.eq(userId))
                 .fetchOptional { it.into(u).into(User::class.java) }
-                .orElseThrow { ErrorCodes.commonNotFound()() }
+                .orElseThrow { commonNotFound()() }
         }
 }
