@@ -31,10 +31,11 @@ object ResetPassword {
     class Invoke(credentials: Credentials, optionalSecurity: Security) :
         ContractHandler(credentials, optionalSecurity) {
 
-        data class InvokeRequest(override val email: String) : EmailRequest(email)
+        data class InvokeRequest(val email: String) : EmailRequest(email)
 
         private val handler: HttpHandler = { req ->
             val json = requestLens(req)
+            json.check()
 
             transaction {
                 val u = Users.USERS

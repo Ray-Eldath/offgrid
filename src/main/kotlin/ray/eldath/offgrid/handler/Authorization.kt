@@ -20,7 +20,7 @@ import java.time.LocalDateTime
 import java.util.*
 
 class Login(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
-    data class LoginRequest(override val email: String, val password: String) : EmailRequest(email)
+    data class LoginRequest(val email: String, val password: String) : EmailRequest(email)
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class LoginResponse(val bearer: String, val expireIn: Long, val self: OutboundUser)
@@ -29,6 +29,7 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
 
     private val handler: HttpHandler = { req: Request ->
         val json = requestLens(req)
+        json.check()
         val email = json.email
         val plainPassword = json.password.toByteArray()
 

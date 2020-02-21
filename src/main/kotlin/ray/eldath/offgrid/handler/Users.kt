@@ -164,7 +164,7 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class UpdateRequest(
         val username: String?,
-        override val email: String?,
+        val email: String?,
         val role: Int?,
         val extraPermissions: List<InboundExtraPermission>?
     ) : EmailRequest(email)
@@ -174,6 +174,7 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
         checkUserId(userId)
 
         val json = requestLens(req)
+        json.check()
 
         transaction {
             val u = Users.USERS
@@ -311,14 +312,14 @@ class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
 
         val notFound = commonNotFound()()
         val userEmail = checkUserId(userId).email
+
+        if (userEmail == self.user.email)
+            throw ErrorCodes.DELETE_SELF()
         if (fetchByEmail(userEmail)
                 .rightOrThrow { notFound }.rightOrThrow { notFound }.permissions.expand()
                 .any { !self.permissions.contains(it) }
         )
             throw ErrorCodes.DELETE_SURPASS_USER()
-
-        if (userEmail == self.user.email)
-            throw ErrorCodes.DELETE_SELF()
 
         deleteUser(userId)
 

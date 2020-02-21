@@ -33,10 +33,10 @@ import java.time.Duration
 import java.time.LocalDateTime
 
 class Register(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
-    data class RegisterRequest(override val email: String) : EmailRequest(email)
+    data class RegisterRequest(val email: String) : EmailRequest(email)
 
     private val handler: HttpHandler = { req: Request ->
-        val email = requestLens(req).email
+        val email = requestLens(req).also { it.check() }.email
         val either = UserRegistrationStatus.fetchByEmail(email)
         if (either.notHaveLeft)
             throw USER_ALREADY_REGISTERED()
