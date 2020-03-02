@@ -9,9 +9,9 @@ import org.http4k.lens.RequestContextKey
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
+import ray.eldath.offgrid.util.ErrorCodes
 import ray.eldath.offgrid.util.ErrorCodes.LOGIN_REQUIRED
 import ray.eldath.offgrid.util.ErrorCodes.commonBadRequest
-import ray.eldath.offgrid.util.ErrorCodes.permissionDenied
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.Permission.Companion.expand
 import ray.eldath.offgrid.util.sidecar
@@ -29,17 +29,20 @@ data class InboundUser(
         val r = hashSetOf<Permission>()
 
         r.addAll(authorization.role.defaultPermissions.expand())
-        r.addAll(extraPermission.filter { it.isShield == false }.flatMap { it.permissionId.expand() })
-        extraPermission.filter { it.isShield }.forEach { r.removeAll(it.permissionId.expand()) }
+        r.addAll(extraPermission.asSequence().filter { it.isShield == false }.flatMap { it.permissionId.expand() })
+        extraPermission.asSequence().filter { it.isShield }.forEach { r.removeAll(it.permissionId.expand()) }
 
         r
     }
 
-    fun requirePermission(vararg requires: Permission) {
-        requires.expand().filterNot { permissions.contains(it) }
-            .takeIf { it.isNotEmpty() }
-            ?.let { throw permissionDenied(it)() }
-    }
+    fun requirePermission(vararg requires: Permission) =
+        requirePermissionOr({ throw ErrorCodes.permissionDenied(it)() }, *requires)
+
+    inline fun requirePermissionOr(otherwise: (List<Permission>) -> Unit, vararg requires: Permission) =
+        also {
+            requires.expand().filterNot { permissions.contains(it) }
+                .takeIf { it.isNotEmpty() }?.let(otherwise)
+        }
 }
 
 object BearerSecurity : Security {

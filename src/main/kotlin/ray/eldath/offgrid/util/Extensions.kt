@@ -32,5 +32,5 @@ fun Response.Companion.redirectTo(uri: String, status: Status = Status.TEMPORARY
 
 fun ByteArray.toHexString() = joinToString(separator = "") { String.format("%02x", (it.toInt() and 0xFF)) }
 fun <T> Optional<T>.getOrNull(): T? = if (isEmpty) null else get()
-fun Any.json(): String = jacksonObjectMapper().writeValueAsString(this)
+fun Any.asJsonString(): String = jacksonObjectMapper().writeValueAsString(this)
 fun Response.asJson(): JsonNode = jacksonObjectMapper().readTree(this.bodyString())

@@ -11,7 +11,7 @@ import org.http4k.core.Status.Companion.BAD_REQUEST
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.string
 import ray.eldath.offgrid.util.ErrorCode
-import ray.eldath.offgrid.util.json
+import ray.eldath.offgrid.util.asJsonString
 
 data class ApiExceptionData(val code: Int, val message: String, val status: Status = BAD_REQUEST)
 
@@ -48,7 +48,7 @@ object ApiExceptionHandler {
                 } catch (e: ApiException) {
                     val data = e.data
 //                    val json = Jackson.asJsonString(e)   | dont work, see http4k#361
-                    Response(data.status).with(jsonStringLens of data.json())
+                    Response(data.status).with(jsonStringLens of data.asJsonString())
                 } catch (e: StreamReadException) {
                     val w = JsonParseExceptionWrapper(
                         "StreamReadException thrown with message ${e.message}, inward JSON string must be valid",

@@ -40,7 +40,7 @@ object DirectEmailUtil {
                     "with subject $subject and tag $aliyunTag").let {
                 logger.warn(it, e)
 
-                throw (ErrorCodes.sendEmailFailed(toAddress, it + "\n $type: ${e.json()}"))()
+                throw (ErrorCodes.sendEmailFailed(toAddress, it + "\n $type: ${e.asJsonString()}"))()
             }
 
         try {
