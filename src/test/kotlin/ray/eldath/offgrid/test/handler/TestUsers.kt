@@ -63,7 +63,7 @@ class TestUsers {
             resp(listUsers(request("permission" to Permission.RejectUserApplication.id)))
                 .containsExactlyInAnyOrder("offgrid test", "bar foo")
 
-            resp(listUsers(request("permission" to Permission.AllProviderMetrics.id)))
+            resp(listUsers(request("permission" to Permission.PanelMetrics.id)))
                 .containsExactlyInAnyOrder("offgrid test", "foo bar", "bar foo")
 
             resp(listUsers(request("permission" to Permission.User.id)))
@@ -98,7 +98,7 @@ class TestUsers {
     private val users = arrayListOf<UsersRecord>()
     private val rootBearer by lazy {
         Login.responseLens(
-            Login(credentials, security).compile()(
+            Login().compile()(
                 Request(Method.POST, "/login")
                     .with(Login.requestLens of Login.LoginRequest("omega@alpha.com", "123"))
             )

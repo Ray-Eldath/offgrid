@@ -45,14 +45,14 @@ object Core {
     private val allRoutes = arrayListOf<ContractHandler>()
 
     init {
-        allRoutes += Login(credentials, security)
-        allRoutes += Logout(credentials, security)
-        allRoutes += Register(credentials, security)
-        allRoutes += ConfirmEmail.ValidateUrlToken(credentials, security)
-        allRoutes += ConfirmEmail.SubmitUserApplication(credentials, security)
-        allRoutes += ResetPassword.Invoke(credentials, security)
-        allRoutes += ResetPassword.Verify(credentials, security)
-        allRoutes += ResetPassword.Submit(credentials, security)
+        allRoutes += Login()
+        allRoutes += Logout(security)
+        allRoutes += Register()
+        allRoutes += ConfirmEmail.ValidateUrlToken()
+        allRoutes += ConfirmEmail.SubmitUserApplication()
+        allRoutes += ResetPassword.Invoke()
+        allRoutes += ResetPassword.Verify()
+        allRoutes += ResetPassword.Submit()
 
         allRoutes += ListUserApplications(credentials, security)
         allRoutes += ApproveUserApplication(credentials, security)
@@ -68,10 +68,10 @@ object Core {
         allRoutes += Self(credentials, security)
         allRoutes += DeleteSelf(credentials, security)
 
-        allRoutes += MetaUserModel(credentials, security)
+        allRoutes += MetaUserModel(security)
 
-        allRoutes += Echo(credentials, security)
-        allRoutes += Require(credentials, security)
+        allRoutes += Echo()
+        allRoutes += Require()
     }
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.

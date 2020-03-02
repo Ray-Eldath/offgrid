@@ -3,7 +3,6 @@ package ray.eldath.offgrid.test.handler
 import org.http4k.core.Status
 import org.http4k.core.with
 import org.junit.jupiter.api.*
-import ray.eldath.offgrid.core.Core.credentials
 import ray.eldath.offgrid.core.Core.security
 import ray.eldath.offgrid.handler.Login
 import ray.eldath.offgrid.handler.Logout
@@ -21,8 +20,7 @@ class TestUser {
     @Nested
     inner class TestLogin {
         private fun login(email: String, password: String) =
-            Login(credentials, security).compile()
-                .invoke("/login".POST().with(Login.requestLens of Login.LoginRequest(email, password)))
+            Login().compile().invoke("/login".POST().with(Login.requestLens of Login.LoginRequest(email, password)))
 
         @Test
         fun `malformed email address`() {
@@ -67,7 +65,7 @@ class TestUser {
                 .isEqualTo(Status.OK)
         }
 
-        private val route = Logout(credentials, security).compile()
+        private val route = Logout(security).compile()
 
         private fun logout(bearer: String) =
             route.invoke("/logout".GET().header("Authorization", "Bearer $bearer"))

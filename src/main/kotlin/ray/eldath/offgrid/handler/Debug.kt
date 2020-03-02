@@ -3,7 +3,6 @@ package ray.eldath.offgrid.handler
 import org.http4k.contract.ContractRoute
 import org.http4k.contract.div
 import org.http4k.contract.meta
-import org.http4k.contract.security.Security
 import org.http4k.core.HttpHandler
 import org.http4k.core.Method
 import org.http4k.core.Response
@@ -12,7 +11,7 @@ import org.http4k.lens.Path
 import ray.eldath.offgrid.util.ErrorCodes
 import ray.eldath.offgrid.util.RouteTag
 
-class Echo(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
+class Echo : ContractHandler {
 
     private val handler: HttpHandler = {
         Response(Status.OK)
@@ -27,7 +26,7 @@ class Echo(credentials: Credentials, optionalSecurity: Security) : ContractHandl
         } bindContract Method.GET to handler
 }
 
-class Require(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
+class Require : ContractHandler {
 
     private val states = mapOf(
         "ok" to Response(Status.OK),

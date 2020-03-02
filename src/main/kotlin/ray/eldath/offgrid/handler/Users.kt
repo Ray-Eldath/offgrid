@@ -27,7 +27,7 @@ import ray.eldath.offgrid.util.ErrorCodes.commonNotFound
 import ray.eldath.offgrid.util.Permission.Companion.expand
 import java.time.LocalDateTime
 
-class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
+class ListUsers(credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
@@ -138,7 +138,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
             summary = "Query users, ordered by id"
             description = "Provide pagination and filter parameters for matched users, but none of them is required."
             tags += RouteTag.Users
-            security = optionalSecurity
+            security = configuredSecurity
 
             queries +=
                 listOf(pageLens, pageSizeLens, idLens, stateLens, emailLens, usernameLens, roleLens, permissionLens)
@@ -159,8 +159,7 @@ class ListUsers(credentials: Credentials, optionalSecurity: Security) : Contract
     }
 }
 
-class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class ModifyUser(private val credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class UpdateRequest(
@@ -221,7 +220,7 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
                 "All fields are optional. Note that any modification will only take effect after the modified user is re-login."
             tags += RouteTag.Users
 
-            security = optionalSecurity
+            security = configuredSecurity
             consumes += ContentType.APPLICATION_JSON
             receiving(
                 requestLens to UpdateRequest(
@@ -242,8 +241,7 @@ class ModifyUser(credentials: Credentials, optionalSecurity: Security) :
     }
 }
 
-class BanUser(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class BanUser(private val credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
     private fun handler(userId: Int, useless: String): HttpHandler = {
         credentials(it).requirePermission(Permission.ModifyUser)
@@ -266,13 +264,12 @@ class BanUser(credentials: Credentials, optionalSecurity: Security) :
             summary = "Ban user"
             tags += RouteTag.Users
 
-            security = optionalSecurity
+            security = configuredSecurity
             returning(Status.OK to "specified user has been banned.")
         } bindContract Method.GET to ::handler
 }
 
-class UnbanUser(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class UnbanUser(private val credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
     private fun handler(userId: Int, useless: String): HttpHandler = {
         credentials(it).requirePermission(Permission.ModifyUser)
@@ -296,7 +293,7 @@ class UnbanUser(credentials: Credentials, optionalSecurity: Security) :
             summary = "Unban the banned user"
             tags += RouteTag.Users
 
-            security = optionalSecurity
+            security = configuredSecurity
             returning(
                 Status.OK to "specified user has been unbanned, if banned beforehand, note that if not so, " +
                         "200 will still be returned anyway."
@@ -304,8 +301,7 @@ class UnbanUser(credentials: Credentials, optionalSecurity: Security) :
         } bindContract Method.GET to ::handler
 }
 
-class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class DeleteUser(private val credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
     private fun handler(userId: Int): HttpHandler = { req ->
         val self = credentials(req)
@@ -332,7 +328,7 @@ class DeleteUser(credentials: Credentials, optionalSecurity: Security) :
             summary = "Delete user"
             tags += RouteTag.Users
 
-            security = optionalSecurity
+            security = configuredSecurity
             consumes += ContentType.APPLICATION_JSON
             returning(Status.OK to "specified user has been deleted.")
         } bindContract Method.DELETE to ::handler

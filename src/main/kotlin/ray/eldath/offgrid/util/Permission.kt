@@ -40,12 +40,9 @@ enum class Permission(
 
     Graph("G"), // implies forbidden model & provider, etc.
 
-    SelfProviderMetrics("M_Ps"),
-    AllProviderMetrics("M_Pa", SelfProviderMetrics),
-    SelfModelMetrics("M_Ms"),
-    AllModelMetrics("M_Ma", SelfModelMetrics),
-    SystemMetrics("M_S"),
-    Metrics("M", SystemMetrics, AllModelMetrics, AllProviderMetrics),
+    InternalMetrics("M_I"),
+    PanelMetrics("M_P"),
+    Metrics("M", InternalMetrics, PanelMetrics),
 
     Root("ROOT", User, UserApplication, ProviderRegistry, ModelRegistry, ComputationResult, Graph, Metrics);
 
@@ -60,7 +57,7 @@ enum class Permission(
             else this.childrenPermissions
                 .filterNotNull()
                 .flatMap { it.expand() }
-                .toMutableList().also { it.add(this) }
+                .toMutableList().also { it.add(this) }.distinct()
 
         fun Array<out Permission>.expand(): List<Permission> = flatMap { it.expand() }.distinct()
 
@@ -91,7 +88,6 @@ enum class UserRole(val id: Int, vararg defaultPermissions: Permission) {
 
     MetricsAdmin(33, Permission.Metrics),
     SelfComputationAdmin(2, Permission.SelfComputationResult),
-    SelfProviderAdmin(1, Permission.SelfProviderMetrics),
     Root(0, Permission.Root);
 
     val defaultPermissions = defaultPermissions.expand()

@@ -11,8 +11,7 @@ import ray.eldath.offgrid.model.OutboundUser
 import ray.eldath.offgrid.model.toOutbound
 import ray.eldath.offgrid.util.RouteTag
 
-class Self(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class Self(credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
     private val handler: HttpHandler = { req ->
 
@@ -38,15 +37,14 @@ class Self(credentials: Credentials, optionalSecurity: Security) :
         "/self" meta {
             summary = "Get current user's information"
             tags += RouteTag.Self
-            security = optionalSecurity
+            security = configuredSecurity
 
             produces += ContentType.APPLICATION_JSON
             returning(Status.OK, responseLens to OutboundUser.mock)
         } bindContract Method.GET to handler
 }
 
-class DeleteSelf(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class DeleteSelf(credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
     private val handler: HttpHandler = { req ->
         val self = credentials(req)
@@ -61,7 +59,7 @@ class DeleteSelf(credentials: Credentials, optionalSecurity: Security) :
             summary = "Delete current user"
             description = "User should be redirected to login page immediately."
             tags += RouteTag.Self
-            security = optionalSecurity
+            security = configuredSecurity
 
             returning(Status.OK to "current logged user has been deleted.")
         } bindContract Method.DELETE to handler

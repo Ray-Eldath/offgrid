@@ -14,8 +14,7 @@ import ray.eldath.offgrid.model.OutboundState
 import ray.eldath.offgrid.model.toOutbound
 import ray.eldath.offgrid.util.*
 
-class MetaUserModel(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class MetaUserModel(private val configuredSecurity: Security) : ContractHandler {
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class RolesEntry(val role: OutboundRole, val defaultPermissions: List<OutboundPermission>)
@@ -42,7 +41,7 @@ class MetaUserModel(credentials: Credentials, optionalSecurity: Security) :
                 "Currently consisted of user-related enumeration used for modeling user, like all available" +
                         " permissions, roles and user states."
             tags += RouteTag.Meta
-            security = optionalSecurity
+            security = configuredSecurity
             outJson()
 
             returning("requested data" to response)

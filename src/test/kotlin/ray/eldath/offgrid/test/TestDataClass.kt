@@ -91,7 +91,7 @@ class TestDataClass {
             val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, false)))
 
             expectCatching { inbound.requirePermission(ListUser, DeleteUser, User) }.succeeded().println()
-            expectCatching { inbound.requirePermission(Metrics, SystemMetrics) }.succeeded().println()
+            expectCatching { inbound.requirePermission(Metrics, PanelMetrics) }.succeeded().println()
         }
 
         private fun permissionDeniedException(vararg require: Permission) =

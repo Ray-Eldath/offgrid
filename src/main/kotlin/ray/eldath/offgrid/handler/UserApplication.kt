@@ -30,8 +30,7 @@ import ray.eldath.offgrid.util.Permission.Companion.expand
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
 
-class ListUserApplications(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class ListUserApplications(credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class ListResponseEntry(
@@ -84,7 +83,7 @@ class ListUserApplications(credentials: Credentials, optionalSecurity: Security)
             summary = "Query register applications, ordered by id"
             description = "Filter register applications with given predicates, note that none of them is required."
             tags += RouteTag.UserApplication
-            security = optionalSecurity
+            security = configuredSecurity
 
             queries += listOf(pageLens, pageSizeLens, emailLens, usernameLens)
 
@@ -103,8 +102,8 @@ class ListUserApplications(credentials: Credentials, optionalSecurity: Security)
     }
 }
 
-class ApproveUserApplication(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class ApproveUserApplication(private val credentials: Credentials, private val configuredSecurity: Security) :
+    ContractHandler {
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class ApproveRequest(val roleId: Int, val extraPermissions: List<InboundExtraPermission>? = null) {
@@ -184,7 +183,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
         "/application" / Path.int().of("id", "id of the application") / "approve" meta {
             summary = "Approve the registration application"
             description = "An email will be sent to notify the user."
-            security = optionalSecurity
+            security = configuredSecurity
             tags += RouteTag.UserApplication
 
             allJson()
@@ -193,7 +192,7 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
                     UserRole.MetricsAdmin.id,
                     listOf(
                         Permission.User.toExtraExchangeable(false),
-                        Permission.SystemMetrics.toExtraExchangeable(true)
+                        Permission.PanelMetrics.toExtraExchangeable(true)
                     )
                 )
             )
@@ -241,8 +240,8 @@ class ApproveUserApplication(credentials: Credentials, optionalSecurity: Securit
     }
 }
 
-class RejectUserApplication(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class RejectUserApplication(private val credentials: Credentials, private val configuredSecurity: Security) :
+    ContractHandler {
 
     private fun handler(id: Int, useless: String): HttpHandler = { req ->
         credentials(req).requirePermission(Permission.RejectUserApplication)
@@ -268,7 +267,7 @@ class RejectUserApplication(credentials: Credentials, optionalSecurity: Security
             description =
                 "Given application as well as any further applications linked with this email will all be rejected, " +
                         "an email will be sent to notify the user as well."
-            security = optionalSecurity
+            security = configuredSecurity
             tags += RouteTag.UserApplication
 
             returning(Status.OK to "given application has been marked as rejected")
@@ -302,8 +301,8 @@ class RejectUserApplication(credentials: Credentials, optionalSecurity: Security
     }
 }
 
-class ResetUserApplication(credentials: Credentials, optionalSecurity: Security) :
-    ContractHandler(credentials, optionalSecurity) {
+class ResetUserApplication(private val credentials: Credentials, private val configuredSecurity: Security) :
+    ContractHandler {
 
     private fun handler(id: Int, useless: String): HttpHandler = { req ->
         credentials(req).requirePermission(Permission.RejectUserApplication)
@@ -325,7 +324,7 @@ class ResetUserApplication(credentials: Credentials, optionalSecurity: Security)
             summary = "Reset the registration application"
             description =
                 "Clear related entry in the database. After this, banned applicant could submit another application again."
-            security = optionalSecurity
+            security = configuredSecurity
             tags += RouteTag.UserApplication
 
             returning(Status.OK to "given application entry has been deleted")

@@ -8,7 +8,6 @@ import kotlinx.coroutines.launch
 import org.http4k.contract.ContractRoute
 import org.http4k.contract.div
 import org.http4k.contract.meta
-import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
@@ -28,8 +27,7 @@ import java.time.LocalDateTime
 
 object ResetPassword {
 
-    class Invoke(credentials: Credentials, optionalSecurity: Security) :
-        ContractHandler(credentials, optionalSecurity) {
+    class Invoke : ContractHandler {
 
         data class InvokeRequest(val email: String) : EmailRequest(email)
 
@@ -124,8 +122,7 @@ object ResetPassword {
                 }
         }
 
-    class Verify(credentials: Credentials, optionalSecurity: Security) :
-        ContractHandler(credentials, optionalSecurity) {
+    class Verify : ContractHandler {
 
         private fun handler(urlToken: String): HttpHandler = {
             verifyToken(ResetPasswordUrlToken.parse(urlToken))
@@ -143,8 +140,7 @@ object ResetPassword {
             } bindContract Method.GET to ::handler
     }
 
-    class Submit(credentials: Credentials, optionalSecurity: Security) :
-        ContractHandler(credentials, optionalSecurity) {
+    class Submit : ContractHandler {
 
         @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
         data class SubmitRequest(val newPassword: String)

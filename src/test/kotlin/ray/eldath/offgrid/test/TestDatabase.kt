@@ -15,7 +15,7 @@ import ray.eldath.offgrid.util.UserRole
 import ray.eldath.offgrid.util.transaction
 import strikt.api.expect
 import strikt.api.expectThat
-import strikt.assertions.containsExactlyInAnyOrder
+import strikt.assertions.contains
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
@@ -87,7 +87,7 @@ object TestDatabase {
 
                 that(user.email).isEqualTo("test@offgrid.ray-eldath.me")
                 that(auth.role).isEqualTo(UserRole.Root)
-                that(list).containsExactlyInAnyOrder(
+                that(list).contains(
                     ExtraPermission(authId, Permission.ComputationResult, true),
                     ExtraPermission(authId, Permission.SelfComputationResult, false)
                 )

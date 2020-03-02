@@ -19,7 +19,7 @@ import ray.eldath.offgrid.util.*
 import java.time.LocalDateTime
 import java.util.*
 
-class Login(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
+class Login : ContractHandler {
     data class LoginRequest(val email: String, val password: String) : EmailRequest(email)
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
@@ -126,18 +126,14 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
                 }
             else {
                 val i: InboundUser = either.rightOrThrow.rightOrThrow
-                if (!Argon2.verify(
-                        i.authorization.hashedPassword,
-                        plainPassword
-                    )
-                )
+                if (!Argon2.verify(i.authorization.hashedPassword, plainPassword))
                     ErrorCodes.USER_NOT_FOUND
                 else null
             }) or either.right
     }
 }
 
-class Logout(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
+class Logout(private val configuredSecurity: Security) : ContractHandler {
 
     private fun handler(): HttpHandler = { req ->
         BearerSecurity.invalidate(req.safeBearerToken())
@@ -148,7 +144,7 @@ class Logout(credentials: Credentials, optionalSecurity: Security) : ContractHan
         "/logout" meta {
             summary = "Logout"
             tags += RouteTag.Authorization
-            security = optionalSecurity
+            security = configuredSecurity
             allJson()
 
             returning(Status.OK to "given bearer has been invalidated in the cache")

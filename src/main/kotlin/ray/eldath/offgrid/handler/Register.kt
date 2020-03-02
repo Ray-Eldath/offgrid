@@ -7,7 +7,6 @@ import org.http4k.contract.ContractRoute
 import org.http4k.contract.RouteMetaDsl
 import org.http4k.contract.div
 import org.http4k.contract.meta
-import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.core.Status.Companion.OK
 import org.http4k.format.Jackson.auto
@@ -32,7 +31,7 @@ import ray.eldath.offgrid.util.transaction
 import java.time.Duration
 import java.time.LocalDateTime
 
-class Register(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
+class Register : ContractHandler {
     data class RegisterRequest(val email: String) : EmailRequest(email)
 
     private val handler: HttpHandler = { req: Request ->
@@ -143,8 +142,7 @@ object ConfirmEmail {
         return application
     }
 
-    class SubmitUserApplication(credentials: Credentials, optionalSecurity: Security) :
-        ContractHandler(credentials, optionalSecurity) {
+    class SubmitUserApplication : ContractHandler {
 
         private val requestLens = Body.auto<UsernamePassword>().toLens()
 
@@ -183,8 +181,7 @@ object ConfirmEmail {
             } bindContract Method.POST to ::handler
     }
 
-    class ValidateUrlToken(credentials: Credentials, optionalSecurity: Security) :
-        ContractHandler(credentials, optionalSecurity) {
+    class ValidateUrlToken : ContractHandler {
 
         private fun handler(inboundToken: String) = { _: Request ->
             validateUrlToken(ConfirmUrlToken.parse(inboundToken))
