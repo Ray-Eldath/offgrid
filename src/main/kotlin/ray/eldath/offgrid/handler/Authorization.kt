@@ -36,26 +36,15 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
         val currentBearer = req.bearerToken()
         val current = currentBearer?.let { BearerSecurity.query(it) }
 
-        val inbound =
+        val inbound: InboundUser =
             if (current == null) {
                 if (currentBearer != null)
                     throw ErrorCodes.AUTH_TOKEN_INVALID_OR_EXPIRED()
 
-                val either = runState(
-                    UserRegistrationStatus.fetchByEmail(
-                        email
-                    ), plainPassword
-                )
-                if (either.haveLeft)
-                    throw either.leftOrThrow()
-                else
-                    either.rightOrThrow.rightOrThrow
+                authenticate(email, plainPassword)
             } else current
 
         val (user, auth, _) = inbound
-
-        if (user.state == UserState.Banned)
-            throw ErrorCodes.USER_HAS_BEEN_BANNED()
 
         transaction {
             val a = Authorizations.AUTHORIZATIONS
@@ -112,6 +101,17 @@ class Login(credentials: Credentials, optionalSecurity: Security) : ContractHand
     companion object {
         val requestLens = Body.auto<LoginRequest>().toLens()
         val responseLens = Body.auto<LoginResponse>().toLens()
+
+        fun authenticate(email: String, password: ByteArray): InboundUser =
+            runState(UserRegistrationStatus.fetchByEmail(email), password).let {
+                if (it.haveLeft)
+                    throw it.leftOrThrow()
+                else
+                    it.rightOrThrow.rightOrThrow.also { inbound ->
+                        if (inbound.user.state == UserState.Banned)
+                            throw ErrorCodes.USER_HAS_BEEN_BANNED()
+                    }
+            }
 
         fun <L : UserRegistrationStatus, R : ApplicationOrInbound> runState(
             either: Either<L, R>,

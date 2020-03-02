@@ -30,6 +30,7 @@ import java.time.LocalDateTime
 class ListUsers(credentials: Credentials, optionalSecurity: Security) : ContractHandler(credentials, optionalSecurity) {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
     data class ListResponseEntry(
         val id: Int,
         val state: Int,
