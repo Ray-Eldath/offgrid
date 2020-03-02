@@ -12,14 +12,14 @@ import org.http4k.lens.Query
 import org.http4k.lens.string
 import ray.eldath.offgrid.component.ApiException
 import ray.eldath.offgrid.component.BearerSecurity
+import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.core.Core
-import ray.eldath.offgrid.util.RouteTag
-import ray.eldath.offgrid.util.asJson
-import ray.eldath.offgrid.util.redirectTo
+import ray.eldath.offgrid.util.*
 
 object Hydra {
+    private val HYDRA_HOST = Core.getEnv("OFFGRID_HYDRA_HOST").trimEnd('/')
+
     private val client = OkHttp()
-    private val hydraHost = Core.getEnv("OFFGRID_HYDRA_HOST").trimEnd('/')
     private val challengeLens = Query.string().required("login_challenge", "challenge code provided by Hydra")
 
     class HydraCheck : ContractHandler {
@@ -29,7 +29,7 @@ object Hydra {
 
         private val handler: HttpHandler = { req ->
             val hydra =
-                Request(Method.GET, "$hydraHost/oauth2/auth/requests/login")
+                Request(Method.GET, "$HYDRA_HOST/oauth2/auth/requests/login")
                     .query("login_challenge", challengeLens(req))
                     .let(client).let { jacksonObjectMapper().readTree(it.bodyString()) }
 
@@ -52,7 +52,7 @@ object Hydra {
                 tags += RouteTag.Hydra
 
                 returning(Status.TEMPORARY_REDIRECT to "user had logged, directly redirect accordingly")
-                returning(Status.OK, responseLens to HydraCheckResponse("Grafana", listOf("profile", "system_metrics")))
+                returning(Status.OK, responseLens to HydraCheckResponse("Grafana", listOf("profile", "grafana")))
             } bindContract Method.GET to handler
 
         companion object {
@@ -79,8 +79,45 @@ object Hydra {
                 tags += RouteTag.Hydra
 
                 receiving(Login.requestLens)
-                returning(Status.TEMPORARY_REDIRECT to "redirect accordingly")
+                returning(Status.TEMPORARY_REDIRECT to "redirect request accordingly")
             } bindContract Method.POST to handler
+    }
+
+    class HydraConsent : ContractHandler {
+
+        private val handler: HttpHandler = { req ->
+            val challenge = challengeLens(req)
+            val hydra = Request(Method.PUT, "$HYDRA_HOST/oauth2/auth/requests/consent")
+                .query("login_challenge", challenge).let(client).asJson()
+
+            val skip = hydra["skip"].asBoolean()
+            val email = hydra["subject"].asText()
+            val requestedScopes = hydra["requested_scope"].map { it.asText() }
+
+            if (!skip) { // if not skip, check permission
+                val permissions =
+                    requestedScopes.mapNotNull { OAuthScope.fromId(it) }.flatMap { it.permissions.toList() }
+
+                UserRegistrationStatus.fetchByEmail(email).rightOrThrow.rightOrThrow.requirePermissionOr(
+                    {
+                        reject(
+                            uri = "$HYDRA_HOST/oauth2/auth/requests/consent/reject",
+                            challenge = challenge,
+                            exception = ErrorCodes.permissionDenied(it)()
+                        )
+                    }, *permissions.toTypedArray()
+                )
+            }
+            // if skip or success
+            Request(Method.PUT, "$HYDRA_HOST/oauth2/auth/requests/consent/accept")
+                .query("login_challenge", challenge)
+                .body("")
+                .let(client).redirectAccordingly()
+        }
+
+        override fun compile(): ContractRoute {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
     }
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
@@ -105,15 +142,18 @@ object Hydra {
 
     private fun reject(uri: String, challenge: String, exception: ApiException) =
         Request(Method.PUT, uri).query("login_challenge", challenge)
-            .with(HydraRejectRequest.lens of HydraRejectRequest.fromApiException(exception)).let(client)
-            .let { Response.redirectTo(it.asJson()["redirect_to"].asText()) }
+            .with(HydraRejectRequest.lens of HydraRejectRequest.fromApiException(exception))
+            .let(client).redirectAccordingly()
 
     private fun rejectLogin(challenge: String, exception: ApiException) =
-        reject("$hydraHost/oauth2/auth/requests/login/reject", challenge, exception)
+        reject("$HYDRA_HOST/oauth2/auth/requests/login/reject", challenge, exception)
 
-    private fun acceptLogin(challenge: String, subject: String) =
-        Request(Method.PUT, "$hydraHost/oauth2/auth/requests/login/accept")
+    private fun acceptLogin(challenge: String, email: String) =
+        Request(Method.PUT, "$HYDRA_HOST/oauth2/auth/requests/login/accept")
             .query("login_challenge", challenge)
-            .with(HydraLoginAcceptRequest.lens of HydraLoginAcceptRequest(subject)).let(client)
-            .let { Response.redirectTo(it.asJson()["redirect_to"].asText()) }
+            .with(HydraLoginAcceptRequest.lens of HydraLoginAcceptRequest(subject = email))
+            .let(client).redirectAccordingly()
+
+    private fun Response.redirectAccordingly(key: String = "redirect_to") =
+        Response.redirectTo(asJson()[key].asText())
 }

@@ -51,17 +51,17 @@ enum class Permission(
     companion object {
         fun fromId(id: String) = values().firstOrNull { it.id == id }
 
-        fun Permission.expand(): List<Permission> =
+        fun Permission.expand(): Sequence<Permission> =
             if (this.childrenPermissions.isEmpty())
-                listOf(this)
-            else this.childrenPermissions
+                sequenceOf(this)
+            else this.childrenPermissions.asSequence()
                 .filterNotNull()
                 .flatMap { it.expand() }
-                .toMutableList().also { it.add(this) }.distinct()
+                .plus(this).distinct()
 
-        fun Array<out Permission>.expand(): List<Permission> = flatMap { it.expand() }.distinct()
+        fun Array<out Permission>.expand(): List<Permission> = flatMap { it.expand().toList() }
 
-        fun Collection<Permission>.expand(): List<Permission> = flatMap { it.expand() }.distinct()
+        fun Collection<Permission>.expand(): List<Permission> = flatMap { it.expand().toList() }
     }
 }
 

@@ -37,8 +37,8 @@ class Login : ContractHandler {
         val current = currentBearer?.let { BearerSecurity.query(it) }
 
         val inbound: InboundUser =
-            if (current == null) {
-                if (currentBearer != null)
+            if (current == null) { // can not find corresponding user in registry
+                if (currentBearer != null) // but the bearer is set, indicates that the bearer is invalid
                     throw ErrorCodes.AUTH_TOKEN_INVALID_OR_EXPIRED()
 
                 authenticate(email, plainPassword)
