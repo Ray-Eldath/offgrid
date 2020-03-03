@@ -80,7 +80,7 @@ object Hydra {
                 queries += challengeLens
                 tags += RouteTag.Hydra
 
-                receiving(Login.requestLens)
+                receiving(Login.requestLens to Login.LoginRequest("alpha.beta@omega.com", "mypassword"))
                 returning(Status.TEMPORARY_REDIRECT to "redirect request accordingly")
             } bindContract Method.POST to handler
     }
@@ -95,7 +95,6 @@ object Hydra {
             val hydra = Request(Method.PUT, "$HYDRA_HOST/oauth2/auth/requests/consent")
                 .query("login_challenge", challenge).let(client).asJson()
 
-            val skip = hydra["skip"].asBoolean()
             val email = hydra["subject"].asText()
             val requestedScopes = hydra["requested_scope"].map { it.asText() }
 

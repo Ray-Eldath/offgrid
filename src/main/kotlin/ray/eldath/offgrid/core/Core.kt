@@ -72,6 +72,10 @@ object Core {
 
         allRoutes += Echo()
         allRoutes += Require()
+
+        allRoutes += Hydra.HydraCheck()
+        allRoutes += Hydra.HydraLogin()
+        allRoutes += Hydra.HydraConsent()
     }
 
     private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.
