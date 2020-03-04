@@ -33,6 +33,29 @@ services:
     networks:
       - offgrid
 
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./offgrid/grafana:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - GF_AUTH_BASIC=false
+      - GF_AUTH_GENERIC_OAUTH_ENABLED=true
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET}
+      - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile grafana
+      - GF_AUTH_GENERIC_OAUTH_AUTH_URL=${OFFGRID_HOST}/service/oauth/oauth2/auth
+      - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=${OFFGRID_HOST}/service/oauth/oauth2/token
+      - GF_AUTH_GENERIC_OAUTH_API_URL=${OFFGRID_HOST}/service/oauth/userinfo
+      - GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP=true
+      - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH=role
+      - GF_AUTH_GENERIC_OAUTH_NAME=Offgrid
+      - GF_DATABASE_URL=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@mysql:3306/grafana
+      - GF_DATABASE_TYPE=mysql
+      - GF_SERVER_ROOT_URL=${OFFGRID_GRAFANA_HOST}
+      - GF_SERVER_DOMAIN=${OFFGRID_GRAFANA_DOMAIN}
+
   hydra:
     depends_on:
       - hydra-migrate
@@ -86,6 +109,14 @@ services:
       - OFFGRID_BACKEND_JDBC_URL=jdbc:mysql://database:3306/offgrid
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID}
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET}
+
+  traefik:
+    image: traefik:latest
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
 
 networks:
   offgrid:

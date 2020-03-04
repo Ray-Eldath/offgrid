@@ -3,6 +3,7 @@ package ray.eldath.offgrid.model
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming
 import ray.eldath.offgrid.component.Md5
+import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.util.ErrorCodes
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
@@ -49,7 +50,7 @@ data class OutboundUser(
     val permissions: Collection<OutboundPermission>,
     val lastLoginTime: LocalDateTime? = null,
     val registerTime: LocalDateTime? = null,
-    val avatarUrl: String = "https://cdn.v2ex.com/gravatar/${Md5.hash(email)}.jpg?r=g&d=retro&s=200"
+    val avatarUrl: String = avatarUrl(email)
 ) {
 
     companion object {
@@ -66,6 +67,9 @@ data class OutboundUser(
         )
     }
 }
+
+fun User.avatarUrl() = avatarUrl(email)
+fun avatarUrl(email: String) = "https://cdn.v2ex.com/gravatar/${Md5.hash(email)}.jpg?r=g&d=retro&s=200"
 
 data class OutboundPermission(val id: String, val name: String)
 

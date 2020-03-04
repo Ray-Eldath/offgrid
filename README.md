@@ -51,7 +51,10 @@ Some password and secret can be generated with `cat /dev/urandom | tr -dc 'a-zA-
 | `OFFGRID_HYDRA_HOST`                          | Host of Hydra public service. May automatically handled by edge router if feasiable. |
 | `OFFGRID_HYDRA_SECRETS_SYSTEM`                | Secret used to encrypt database of Hydra. Should be kept carefully. |
 | `OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID`     | AccessKeyId of Aliyun DirectMail service.                    |
-| `OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET` | AccessKeySecrey of Aliyun DirectMail service.                |
+| `OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET` | AccessKeySecret of Aliyun DirectMail service.                |
+| `OFFGRID_GRAFANA_HOST`                        | Host of Grafana panel public service.                        |
+| `OFFGRID_GRAFANA_DOMAIN`                      | Domain of Grafana panel public service, should consists  `OFFGRID_GRAFANA_HOST`. |
+| `OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET`         | Create the secret with `hydra`, used for OAuth authentication. |
 
 Many environment variables are handled by `docker-compose` automatically since inter-containers connection could established use container name solely, these environment variables are not listed above. So if you deploy Project Offgrid without the pre-defined `docker-compose.yml`, these unset variables may cause problems.
 

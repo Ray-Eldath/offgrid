@@ -19,6 +19,7 @@ import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.component.BearerSecurity.bearerToken
 import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.core.Core
+import ray.eldath.offgrid.model.avatarUrl
 import ray.eldath.offgrid.util.*
 import java.util.concurrent.TimeUnit
 
@@ -150,7 +151,8 @@ object Hydra {
                                 "name" to string(user.username),
                                 "email" to string(user.email),
                                 "email_verified" to boolean(true),
-                                "role" to string(if (auth.role == UserRole.Root) "Admin" else "Editor")
+                                "role" to string(if (auth.role == UserRole.Root) "Admin" else "Editor"),
+                                "picture" to string(user.avatarUrl())
                             )
                         )
                     )

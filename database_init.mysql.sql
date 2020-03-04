@@ -1,5 +1,6 @@
 create schema offgrid;
 create schema hydra;
+create schema grafana;
 
 #
 
