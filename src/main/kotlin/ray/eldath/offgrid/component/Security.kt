@@ -37,9 +37,9 @@ data class InboundUser(
     }
 
     fun requirePermission(vararg requires: Permission) =
-        requirePermissionOr({ throw ErrorCodes.permissionDenied(it)() }, *requires)
+        requirePermissionOr(requires) { throw ErrorCodes.permissionDenied(it)() }
 
-    inline fun requirePermissionOr(otherwise: (List<Permission>) -> Unit, vararg requires: Permission) =
+    inline fun requirePermissionOr(requires: Array<out Permission>, otherwise: (List<Permission>) -> Unit) =
         also {
             requires.expand().filterNot { permissions.contains(it) }
                 .takeIf { it.isNotEmpty() }?.let(otherwise)

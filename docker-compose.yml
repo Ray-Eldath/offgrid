@@ -55,9 +55,10 @@ services:
       - SECRETS_SYSTEM=${OFFGRID_HYDRA_SECRETS_SYSTEM}
     labels:
       - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.middlewares.stripprefix-hydra.stripprefix.prefixes=/service/oauth"
       - "traefik.http.routers.hydra.rule=Path(`/service/oauth`)"
-      - "traefik.http.routers.hydra.middlewares=gzip"
-      - "traefik.http.routers.hydra.entrypoints=http"
+      - "traefik.http.routers.hydra.middlewares=gzip,stripprefix-hydra"
+      - "traefik.http.routers.hydra.entrypoints=http,stripprefix-hydra"
 
   hydra-migrate:
     image: oryd/hydra
