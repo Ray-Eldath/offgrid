@@ -37,19 +37,19 @@ class TestDataClass {
 
         @Test
         fun `test single permission expand`() {
-            expectThat(ListUserApplication.expand())
+            expectThat(ListUserApplication.expand().toList())
                 .containsExactlyInAnyOrder(ListUserApplication)
         }
 
         @Test
         fun `test Root permission expand`() {
-            expectThat(Root.expand())
+            expectThat(Root.expand().toList())
                 .containsExactlyInAnyOrder(values().toList())
         }
 
         @Test
         fun `test ModelRegistry expand`() {
-            expectThat(ModelRegistry.expand())
+            expectThat(ModelRegistry.expand().toList())
                 .containsExactlyInAnyOrder(
                     ModelRegistry,
                     ListModelRegistry,

@@ -2,6 +2,7 @@ package ray.eldath.offgrid.component
 
 import com.github.benmanes.caffeine.cache.Caffeine
 import de.mkammerer.argon2.Argon2Factory
+import io.micrometer.core.instrument.binder.cache.CaffeineCacheMetrics
 import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.filter.ServerFilters
@@ -56,6 +57,10 @@ object BearerSecurity : Security {
         recordStats()
     }.build<String, InboundUser>()
 
+    init {
+        CaffeineCacheMetrics.monitor(Metrics.registry, caffeine, "caffeine.authorization_bearer");
+    }
+
     fun authorize(user: InboundUser): String =
         UUID.randomUUID().toString().sidecar {
             caffeine.put(it, user)
@@ -95,17 +100,15 @@ object BearerSecurity : Security {
 object Argon2 {
     private val argon2 = Argon2Factory.create()
 
-    fun hash(password: ByteArray): String {
-        return argon2.hash(10, 65536, 1, password).sidecar {
+    fun hash(password: ByteArray): String =
+        argon2.hash(10, 65536, 1, password).sidecar {
             argon2.wipeArray(password)
         }
-    }
 
-    fun verify(hashedPassword: String, password: ByteArray): Boolean {
-        return argon2.verify(hashedPassword, password).sidecar {
+    fun verify(hashedPassword: String, password: ByteArray): Boolean =
+        argon2.verify(hashedPassword, password).sidecar {
             argon2.wipeArray(password)
         }
-    }
 }
 
 object Md5 {

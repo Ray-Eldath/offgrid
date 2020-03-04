@@ -4,9 +4,6 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import io.micrometer.core.instrument.Clock
-import io.micrometer.graphite.GraphiteConfig
-import io.micrometer.graphite.GraphiteMeterRegistry
 import org.http4k.contract.contract
 import org.http4k.contract.openapi.ApiInfo
 import org.http4k.contract.openapi.v3.OpenApi3
@@ -25,6 +22,7 @@ import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
 import ray.eldath.offgrid.component.ApiExceptionHandler
 import ray.eldath.offgrid.component.BearerSecurity
+import ray.eldath.offgrid.component.Metrics
 import ray.eldath.offgrid.handler.*
 import ray.eldath.offgrid.util.RouteTag
 import java.io.File
@@ -80,13 +78,6 @@ object Core {
         allRoutes += Hydra.HydraConsent()
     }
 
-    private val metrics =
-        object : GraphiteConfig {
-            override fun host(): String = getEnv("OFFGRID_GRAPHITE_HOST")
-
-            override fun get(key: String): String? = null
-        }.let { GraphiteMeterRegistry(it, Clock.SYSTEM) }
-
     val jooqContext: DSLContext by lazy {
         if (!debug)
             HikariConfig().apply {
@@ -96,7 +87,7 @@ object Core {
                 password = getEnv("OFFGRID_DATABASE_PASSWORD")
                 addDataSourceProperty("cachePrepStmts", "true")
                 addDataSourceProperty("prepStmtCacheSize", "250")
-                metricRegistry = metrics
+                metricRegistry = Metrics.registry
             }.let { DSL.using(HikariDataSource(it), SQLDialect.MYSQL) }
         else DSL.using("jdbc:mysql://localhost:3306/offgrid", "offgrid", "1234")
     }
@@ -115,8 +106,8 @@ object Core {
                 }
         } else Filter.NoOp)
             .then(ServerFilters.CatchLensFailure)
-            .then(MetricFilters.Server.RequestCounter(metrics))
-            .then(MetricFilters.Server.RequestTimer(metrics))
+            .then(MetricFilters.Server.RequestCounter(Metrics.registry))
+            .then(MetricFilters.Server.RequestTimer(Metrics.registry))
             .then(ApiExceptionHandler.filter)
     }
 
@@ -144,6 +135,7 @@ object Core {
         println("Offgrid now ready for requests.")
     }
 
+    private const val ENV_PREFIX = "offgrid.env"
     fun loadEnv() {
         val file = File(System.getProperty("user.dir") + "/.env")
         if (!file.exists())
@@ -153,10 +145,16 @@ object Core {
             seq.map { it.split("=") }
                 .filter { it.size >= 2 }
                 .forEach {
-                    System.setProperty("offgrid.env.${it[0]}", it.drop(1).joinToString(""))
+                    System.setProperty("$ENV_PREFIX.${it[0]}", it.drop(1).joinToString(""))
                 }
         }
+
+        System.setProperty("$ENV_PREFIX.loaded", "true")
     }
 
-    fun getEnv(key: String): String = System.getenv(key) ?: System.getProperty("offgrid.env.$key")
+    fun getEnv(key: String): String {
+        if (System.getProperty("$ENV_PREFIX.loaded") == null)
+            loadEnv()
+        return System.getenv(key) ?: System.getProperty("offgrid.env.$key")
+    }
 }

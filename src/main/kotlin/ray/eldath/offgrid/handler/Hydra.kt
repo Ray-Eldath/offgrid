@@ -13,6 +13,7 @@ import org.http4k.format.Jackson.auto
 import org.http4k.format.Jackson.json
 import org.http4k.lens.Query
 import org.http4k.lens.string
+import org.slf4j.LoggerFactory
 import ray.eldath.offgrid.component.ApiException
 import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.component.UserRegistrationStatus
@@ -21,7 +22,8 @@ import ray.eldath.offgrid.util.*
 import java.util.concurrent.TimeUnit
 
 object Hydra {
-    private val HYDRA_HOST = Core.getEnv("OFFGRID_HYDRA_HOST").trimEnd('/')
+    private val logger = LoggerFactory.getLogger("hydra.okhttp")
+    private val HYDRA_HOST = Core.getEnv("OFFGRID_HYDRA_ADMIN_HOST").trimEnd('/')
 
     private val client by lazy {
         OkHttpClient.Builder().apply {
@@ -29,10 +31,13 @@ object Hydra {
             callTimeout(2, TimeUnit.SECONDS)
             followRedirects(false)
 
-            addInterceptor {
+            addNetworkInterceptor {
                 val response = it.proceed(it.request())
                 if (!response.isSuccessful) {
-                    TODO("metrics")
+                    logger.error("request ${it.request()} failed with response: $response")
+                    throw ErrorCodes.commonInternalServerError("HTTP request to hydra failed with: $response")()
+                } else {
+                    System.err.println("success: $response")
                 }
                 response
 
@@ -40,7 +45,8 @@ object Hydra {
         }.let { OkHttp(client = it.build()) }
     }
 
-    private val challengeLens = Query.string().required("login_challenge", "challenge code provided by Hydra")
+    private val loginChallengeLens =
+        Query.string().required("login_challenge", "login challenge code provided by Hydra")
 
     class HydraCheck : ContractHandler {
 
@@ -50,15 +56,15 @@ object Hydra {
         private val handler: HttpHandler = { req ->
             val hydra =
                 Request(Method.GET, "$HYDRA_HOST/oauth2/auth/requests/login")
-                    .query("login_challenge", challengeLens(req))
+                    .query("login_challenge", loginChallengeLens(req))
                     .let(client).let { jacksonObjectMapper().readTree(it.bodyString()) }
 
             val skip = hydra["skip"].asBoolean()
             if (skip)
-                acceptLogin(challengeLens(req), hydra["subject"].asText())
+                acceptLogin(loginChallengeLens(req), hydra["subject"].asText())
             else Response(Status.OK).with(
                 responseLens of HydraCheckResponse(
-                    hydra["client"]["name"].asText("unknown service"),
+                    hydra["client"]["client_name"].asText("unknown service"),
                     hydra["requested_scope"].map { it.asText() })
             )
         }
@@ -68,7 +74,7 @@ object Hydra {
                 summary = "Check if already logged in"
                 description = "If the challenge already logged in, redirection could perform directly. Otherwise " +
                         "username & password should be verified by UI, and then submitted to another API."
-                queries += challengeLens
+                queries += loginChallengeLens
                 tags += RouteTag.Hydra
 
                 returning(Status.TEMPORARY_REDIRECT to "user had logged, directly redirect accordingly")
@@ -82,7 +88,7 @@ object Hydra {
 
     class HydraLogin : ContractHandler {
         private val handler: HttpHandler = { req ->
-            val challenge = challengeLens(req)
+            val challenge = loginChallengeLens(req)
             try {
                 val inbound = Login.requestLens(req).let { Login.authenticate(it.email, it.password.toByteArray()) }
                 acceptLogin(challenge, inbound.user.email)
@@ -95,7 +101,7 @@ object Hydra {
             "/hydra/login" meta {
                 summary = "Conventional login"
                 description = "Login with regular procedure."
-                queries += challengeLens
+                queries += loginChallengeLens
                 tags += RouteTag.Hydra
 
                 receiving(Login.requestLens to Login.LoginRequest("alpha.beta@omega.com", "mypassword"))
@@ -107,11 +113,13 @@ object Hydra {
     private val json = Jackson
 
     class HydraConsent : ContractHandler {
+        private val challengeLens =
+            Query.string().required("consent_challenge", "consent challenge code provided by Hydra")
 
         private val handler: HttpHandler = { req ->
             val challenge = challengeLens(req)
             val hydra = Request(Method.PUT, "$HYDRA_HOST/oauth2/auth/requests/consent")
-                .query("login_challenge", challenge).let(client).asJson()
+                .query("consent_challenge", challenge).also { println(it) }.let(client).also { println(it) }.asJson()
 
             val email = hydra["subject"].asText()
             val requestedScopes = hydra["requested_scope"].map { it.asText() }
@@ -124,7 +132,8 @@ object Hydra {
                     reject(
                         uri = "$HYDRA_HOST/oauth2/auth/requests/consent/reject",
                         challenge = challenge,
-                        exception = ErrorCodes.permissionDenied(it)
+                        exception = ErrorCodes.permissionDenied(it),
+                        queryName = "consent_challenge"
                     )
                 }, *permissions.toTypedArray()
             )
@@ -146,7 +155,7 @@ object Hydra {
             }
 
             Request(Method.PUT, "$HYDRA_HOST/oauth2/auth/requests/consent/accept")
-                .query("login_challenge", challenge)
+                .query("consent_challenge", challenge)
                 .with(acceptConsentLens of json)
                 .let(client).redirectAccordingly()
         }
@@ -156,7 +165,7 @@ object Hydra {
                 summary = "Consent by permissions check"
                 description =
                     "Currently no designated consent UI should be rendered, this API will just consent by user permission."
-                queries += challengeLens
+                queries += loginChallengeLens
                 tags += RouteTag.Hydra
 
                 returning(Status.TEMPORARY_REDIRECT to "redirect request accordingly")
@@ -183,8 +192,8 @@ object Hydra {
         }
     }
 
-    private fun reject(uri: String, challenge: String, exception: ErrorCode) =
-        Request(Method.PUT, uri).query("login_challenge", challenge)
+    private fun reject(uri: String, challenge: String, exception: ErrorCode, queryName: String = "login_challenge") =
+        Request(Method.PUT, uri).query(queryName, challenge)
             .with(HydraRejectRequest.lens of HydraRejectRequest.fromErrorCode(exception))
             .let(client).redirectAccordingly()
 

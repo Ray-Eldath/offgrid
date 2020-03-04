@@ -62,11 +62,18 @@ object ErrorCodes {
     val TOKEN_NOT_FOUND = ErrorCode(402, "given token not found, try to request a new token.", NOT_FOUND)
 
     // 5: internal server error
+    fun commonInternalServerError(reason: String = "") =
+        ErrorCode(
+            500,
+            "internal server error" + if (reason.isBlank()) "" else "with reason $reason",
+            INTERNAL_SERVER_ERROR
+        )
+
     fun sendEmailFailed(target: String, log: String, type: String = "address confirmation email") =
         ErrorCode(
             510,
             "send $type to email address $target failed with log: \n" +
-                    if (log.isEmpty()) "<empty>" else log,
+                    if (log.isBlank()) "<empty>" else log,
             INTERNAL_SERVER_ERROR
         )
 }

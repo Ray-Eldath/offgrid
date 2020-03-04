@@ -5,6 +5,7 @@ Next-generation FHE-MPC platform.
 
 ## Architecture
 
+ - containerization: docker, docker-compose
  - backend: http4k, Kotlin, AdoptOpenJDK
  - database: MySQL
  - metrics database: Graphite

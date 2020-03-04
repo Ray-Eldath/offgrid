@@ -12,6 +12,8 @@ services:
       - ./database_init.mysql.sql:/docker-entrypoint-initdb.d/dsatabase_init.mysql.sql:ro
     ports:
       - "127.0.0.1:3306:3306"
+    networks:
+      - offgrid
     restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=${OFFGRID_DATABASE_ROOT_PASSWORD}
@@ -28,6 +30,8 @@ services:
       - "127.0.0.1:2023-2024:2023-2024"
       - "127.0.0.1:8125:8125/udp"
       - "127.0.0.1:8126:8126"
+    networks:
+      - offgrid
 
   hydra:
     depends_on:
@@ -37,6 +41,8 @@ services:
       - "127.0.0.1:4444:4444" # Public port
       - "127.0.0.1:4445:4445" # Admin port
       - "127.0.0.1:5555:5555" # Port for hydra token user
+    networks:
+      - offgrid
     restart: unless-stopped
     command:
       serve all --dangerous-force-http
@@ -45,13 +51,20 @@ services:
       - URLS_LOGIN=${OFFGRID_HOST}/hydra/login
       - URLS_CONSENT=${OFFGRID_HOST}/hydra/consent
       - URLS_LOGOUT=${OFFGRID_HOST}/hydra/logout # currently unsupported
-      - DSN=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@mysql:3306/hydra?max_conns=20&max_idle_conns=4
+      - DSN=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@tcp(mysql:3306)/hydra?max_conns=20&max_idle_conns=4
       - SECRETS_SYSTEM=${OFFGRID_HYDRA_SECRETS_SYSTEM}
+    labels:
+      - "traefik.http.middlewares.gzip.compress=true"
+      - "traefik.http.routers.hydra.rule=Path(`/service/oauth`)"
+      - "traefik.http.routers.hydra.middlewares=gzip"
+      - "traefik.http.routers.hydra.entrypoints=http"
 
   hydra-migrate:
     image: oryd/hydra
     environment:
-      - DSN=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@mysql:3306/hydra?max_conns=20&max_idle_conns=4
+      - DSN=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@tcp(mysql:3306)/hydra?max_conns=20&max_idle_conns=4
+    networks:
+      - offgrid
     command:
       migrate sql -e --yes
     restart: on-failure
@@ -62,6 +75,8 @@ services:
     #      - ./offgrid/backend:/offgrid
     ports:
       - "127.0.0.1:8080:8080"
+    networks:
+      - offgrid
     restart: always
     environment:
       - OFFGRID_HOST=${OFFGRID_HOST}
@@ -70,3 +85,7 @@ services:
       - OFFGRID_BACKEND_JDBC_URL=jdbc:mysql://database:3306/offgrid
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID}
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET}
+
+networks:
+  offgrid:
+    name: offgrid
