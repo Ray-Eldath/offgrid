@@ -4,7 +4,9 @@ import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import io.micrometer.core.instrument.Clock
+import io.micrometer.graphite.GraphiteConfig
+import io.micrometer.graphite.GraphiteMeterRegistry
 import org.http4k.contract.contract
 import org.http4k.contract.openapi.ApiInfo
 import org.http4k.contract.openapi.v3.OpenApi3
@@ -78,7 +80,13 @@ object Core {
         allRoutes += Hydra.HydraConsent()
     }
 
-    private val metrics = SimpleMeterRegistry() // TODO: test only. substitute for a suitable one.
+    private val metrics =
+        object : GraphiteConfig {
+            override fun host(): String = getEnv("OFFGRID_GRAPHITE_HOST")
+
+            override fun get(key: String): String? = null
+        }.let { GraphiteMeterRegistry(it, Clock.SYSTEM) }
+
     val jooqContext: DSLContext by lazy {
         if (!debug)
             HikariConfig().apply {
@@ -108,6 +116,7 @@ object Core {
         } else Filter.NoOp)
             .then(ServerFilters.CatchLensFailure)
             .then(MetricFilters.Server.RequestCounter(metrics))
+            .then(MetricFilters.Server.RequestTimer(metrics))
             .then(ApiExceptionHandler.filter)
     }
 
@@ -149,9 +158,5 @@ object Core {
         }
     }
 
-    fun getEnv(key: String): String =
-        if (System.getenv(key) != null)
-            System.getenv(key)
-        else
-            System.getProperty("offgrid.env.$key")
+    fun getEnv(key: String): String = System.getenv(key) ?: System.getProperty("offgrid.env.$key")
 }

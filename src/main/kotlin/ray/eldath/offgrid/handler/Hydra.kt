@@ -3,6 +3,7 @@ package ray.eldath.offgrid.handler
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import okhttp3.OkHttpClient
 import org.http4k.client.OkHttp
 import org.http4k.contract.ContractRoute
 import org.http4k.contract.meta
@@ -17,11 +18,28 @@ import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.core.Core
 import ray.eldath.offgrid.util.*
+import java.util.concurrent.TimeUnit
 
 object Hydra {
     private val HYDRA_HOST = Core.getEnv("OFFGRID_HYDRA_HOST").trimEnd('/')
 
-    private val client = OkHttp()
+    private val client by lazy {
+        OkHttpClient.Builder().apply {
+            connectTimeout(500, TimeUnit.MILLISECONDS)
+            callTimeout(2, TimeUnit.SECONDS)
+            followRedirects(false)
+
+            addInterceptor {
+                val response = it.proceed(it.request())
+                if (!response.isSuccessful) {
+                    TODO("metrics")
+                }
+                response
+
+            }
+        }.let { OkHttp(client = it.build()) }
+    }
+
     private val challengeLens = Query.string().required("login_challenge", "challenge code provided by Hydra")
 
     class HydraCheck : ContractHandler {

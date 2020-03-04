@@ -48,6 +48,7 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
     implementation("ch.qos.logback:logback-core:$logbackVersion")
     implementation("io.micrometer:micrometer-core:$micrometerVersion")
+    implementation("io.micrometer:micrometer-registry-graphite:$micrometerVersion")
     implementation("org.http4k:http4k-core:$http4kVersion")
     implementation("org.http4k:http4k-server-apache:$http4kVersion")
     implementation("org.http4k:http4k-client-okhttp:$http4kVersion")

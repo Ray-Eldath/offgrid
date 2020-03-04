@@ -2,7 +2,7 @@ version: "3"
 
 services:
 
-  database:
+  mysql:
     image: mysql:latest
     command:
       - --character-set-server=utf8mb4
@@ -19,6 +19,43 @@ services:
       - MYSQL_PASSWORD=${OFFGRID_DATABASE_PASSWORD}
       - TZ=Asia/Shanghai
 
+  graphite:
+    image: graphiteapp/graphite-statsd
+    restart: always
+    ports:
+      - "127.0.0.1:8100:80"
+      - "127.0.0.1:2003-2004:2003-2004"
+      - "127.0.0.1:2023-2024:2023-2024"
+      - "127.0.0.1:8125:8125/udp"
+      - "127.0.0.1:8126:8126"
+
+  hydra:
+    depends_on:
+      - hydra-migrate
+    image: oryd/hydra:latest
+    ports:
+      - "127.0.0.1:4444:4444" # Public port
+      - "127.0.0.1:4445:4445" # Admin port
+      - "127.0.0.1:5555:5555" # Port for hydra token user
+    restart: unless-stopped
+    command:
+      serve all --dangerous-force-http
+    environment:
+      - URLS_SELF_ISSUER=${OFFGRID_HYDRA_HOST}
+      - URLS_LOGIN=${OFFGRID_HOST}/hydra/login
+      - URLS_CONSENT=${OFFGRID_HOST}/hydra/consent
+      - URLS_LOGOUT=${OFFGRID_HOST}/hydra/logout # currently unsupported
+      - DSN=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@mysql:3306/hydra?max_conns=20&max_idle_conns=4
+      - SECRETS_SYSTEM=${OFFGRID_HYDRA_SECRETS_SYSTEM}
+
+  hydra-migrate:
+    image: oryd/hydra
+    environment:
+      - DSN=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@mysql:3306/hydra?max_conns=20&max_idle_conns=4
+    command:
+      migrate sql -e --yes
+    restart: on-failure
+
   backend:
     build: "."
     #    volumes:
@@ -28,13 +65,8 @@ services:
     restart: always
     environment:
       - OFFGRID_HOST=${OFFGRID_HOST}
+      - OFFGRID_HYDRA_HOST=${OFFGRID_HYDRA_HOST}
+      - OFFGRID_GRAPHITE_HOST=graphite
       - OFFGRID_BACKEND_JDBC_URL=jdbc:mysql://database:3306/offgrid
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID}
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET}
-      
-  portainer:
-    image: portainer/portainer
-    restart: always
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_data:/data

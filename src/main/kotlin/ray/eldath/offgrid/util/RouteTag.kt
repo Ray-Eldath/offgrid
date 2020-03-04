@@ -12,7 +12,7 @@ object RouteTag {
 
     val Users = Tag("Users", "Admin: list, modify, ban and unban, delete user(s).")
 
-    val Hydra = Tag("Hydra", "Hydra Login & Consent Flow, should not be requested manually.")
+    val Hydra = Tag("Hydra", "Hydra Login & Consent Flow, should not be exposed to the public.")
     val Meta = Tag("Meta", "Metadata of the system, like all available user roles, permissions, etc.")
     val Debug = Tag("Debug", "Only for debug purpose, so only enabled in debug mode.")
 }
