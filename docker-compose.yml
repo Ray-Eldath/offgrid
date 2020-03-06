@@ -20,6 +20,8 @@ services:
       - MYSQL_USER=offgrid
       - MYSQL_PASSWORD=${OFFGRID_DATABASE_PASSWORD}
       - TZ=Asia/Shanghai
+    labels:
+      - "traefik.enable=false"
 
   graphite:
     image: graphiteapp/graphite-statsd
@@ -32,6 +34,8 @@ services:
       - "127.0.0.1:8126:8126"
     networks:
       - offgrid
+    labels:
+      - "traefik.enable=false"
 
   grafana:
     image: grafana/grafana:latest
@@ -39,6 +43,8 @@ services:
       - ./offgrid/grafana:/var/lib/grafana
     ports:
       - "127.0.0.1:3000:3000"
+    networks:
+      - offgrid
     environment:
       - GF_AUTH_BASIC=false
       - GF_AUTH_GENERIC_OAUTH_ENABLED=true
@@ -55,10 +61,14 @@ services:
       - GF_DATABASE_TYPE=mysql
       - GF_SERVER_ROOT_URL=${OFFGRID_GRAFANA_HOST}
       - GF_SERVER_DOMAIN=${OFFGRID_GRAFANA_DOMAIN}
+    labels:
+      - "traefik.http.routers.grafana.rule=Host(`grafana`)"
+      - "traefik.http.routers.grafana.middlewares=gzip"
+      - "traefik.http.routers.grafana.entrypoints=web,websecure"
 
   hydra:
     depends_on:
-      - hydra-migrate
+      - hydra-init
     image: oryd/hydra:latest
     ports:
       - "127.0.0.1:4444:4444" # Public port
@@ -79,9 +89,10 @@ services:
     labels:
       - "traefik.http.middlewares.gzip.compress=true"
       - "traefik.http.middlewares.stripprefix-hydra.stripprefix.prefixes=/service/oauth"
+      - "traefik.http.services.hydra.loadbalancer.server.port=4444"
       - "traefik.http.routers.hydra.rule=Path(`/service/oauth`)"
       - "traefik.http.routers.hydra.middlewares=gzip,stripprefix-hydra"
-      - "traefik.http.routers.hydra.entrypoints=http,stripprefix-hydra"
+      - "traefik.http.routers.hydra.entrypoints=web,websecure"
 
   hydra-migrate:
     image: oryd/hydra
@@ -91,6 +102,25 @@ services:
       - offgrid
     command:
       migrate sql -e --yes
+    restart: on-failure
+
+  hydra-init:
+    depends_on:
+      - hydra-migrate
+    image: oryd/hydra
+    environment:
+      - HYDRA_ADMIN_URL=http://hydra:4445
+    networks:
+      - offgrid
+    command: |
+      clients create
+      --skip-tls-verify \
+      --id grafana \
+      --secret ${OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET} \
+      --grant-types authorization_code,refresh_token,client_credentials,implicit \
+      --response-types token,code,id_token \
+      --scope openid,profile,grafana \
+      --callbacks ${OFFGRID_GRAFANA_DOMAIN}/login/generic_oauth
     restart: on-failure
 
   backend:
@@ -104,19 +134,35 @@ services:
     restart: always
     environment:
       - OFFGRID_HOST=${OFFGRID_HOST}
-      - OFFGRID_HYDRA_HOST=${OFFGRID_HYDRA_HOST}
+      - OFFGRID_HYDRA_HOST=${OFFGRID_HOST}/service/oauth
       - OFFGRID_GRAPHITE_HOST=graphite
       - OFFGRID_BACKEND_JDBC_URL=jdbc:mysql://database:3306/offgrid
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID}
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET}
+    lebels:
+      - "traefik.http.routers.backend.rule=Host(`api`)"
+      - "traefik.http.routers.backend.middlewares=gzip"
+      - "traefik.http.routers.backend.entrypoints=web,websecure"
 
   traefik:
     image: traefik:latest
+    ports:
+      - "80:80"
+      - "8080:8080"
+    networks:
+      - offgrid
+    restart: always
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.traefik.address=:8080"
+    labels:
+      - traefik.http.middlewares.traefik-auth.basicauth.users=traefik:${OFFGRID_TRAEFIK_PASSWORD}
+      - "traefik.http.routers.traefik.rule=PathPrefix(`traefik`)"
+      - "traefik.http.routers.traefik.middlewares=gzip,traefik-auth"
+      - "traefik.http.routers.traefik.entrypoints=traefik"
 
 networks:
   offgrid:
