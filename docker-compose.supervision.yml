@@ -1,4 +1,4 @@
-version: "3"
+version: "3.5"
 
 services:
 
@@ -9,10 +9,9 @@ services:
       - "127.0.0.1:9000:9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_data:/data
+      - ~/offgrid/portainer_data:/data
     labels:
       - "traefik.http.routers.portainer.rule=Host(`portainer`)"
-      - "traefik.http.routers.portainer.middlewares=gzip"
       - "traefik.http.routers.portainer.entrypoints=web,websecure"
 
   netdata:
@@ -32,5 +31,4 @@ services:
       - apparmor:unconfined
     labels:
       - "traefik.http.routers.netdata.rule=Host(`netdata`)"
-      - "traefik.http.routers.netdata.middlewares=gzip"
       - "traefik.http.routers.netdata.entrypoints=web,websecure"

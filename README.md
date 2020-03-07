@@ -36,13 +36,14 @@ Note that all URL-staff should omit the tailing slash mark (`/`).
 | Environment variable                          | Description                                                  | Example                            |
 | --------------------------------------------- | ------------------------------------------------------------ | ---------------------------------- |
 | `OFFGRID_HOST`                                | Host of the front end (ongrid) entrypoint.                   | `https://offgrid.org`              |
-| `OFFGRID_DATABASE_PASSWORD`                   | Password of MySQL user `offgrid`. During the initialization process, a user `offgrid` with this password as well as a schema named `offgrid` will be created. All privileges and table creation will be handled automatically. | `prHZDe8OCyL0NdVhWs8JozeeBb1wdKMg` |
-| `OFFGRID_DATABASE_ROOT_PASSWORD`              | Password of MySQL user `root`, will used by `Hydra`. Should be kept carefully. | N/A                                |
+| `OFFGRID_DATABASE_PASSWORD`                   | Password of MySQL user `offgrid`. During the initialization process, a user `offgrid` with this password as well as a schema named `offgrid` will be created. All privileges and table creation will be handled automatically. | N/A |
+| `OFFGRID_DATABASE_ROOT_PASSWORD`              | Password of MySQL user `root`, will used by Hydra. Should be kept carefully. | N/A                                |
 | `OFFGRID_HYDRA_SECRETS_SYSTEM`                | Secret used to encrypt database of Hydra. Should be kept carefully. | N/A                                |
 | `OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID`     | `AccessKeyId` of Aliyun DirectMail service.                  | N/A                                |
 | `OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET` | `AccessKeySecret` of Aliyun DirectMail service.              | N/A                                |
-| `OFFGRID_GRAFANA_HOST`                        | Host of Grafana panel public service. **Should in HTTPS protocol**, otherwise automatically initialization of `hydra` will failed. | `https://grafana.offgrid.org`      |
+| `OFFGRID_GRAFANA_HOST`                        | Host of Grafana panel public service. **Should in HTTPS protocol**, otherwise automatically initialization of Hydra will failed. | `https://grafana.offgrid.org`      |
 | `OFFGRID_GRAFANA_DOMAIN`                      | Domain of Grafana panel public service, should consists  `OFFGRID_GRAFANA_HOST`. | `grafana.offgrid.org`              |
+| `OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET` | Secret of OAuth client of Grafana, will be registered in Hydra. | N/A |
 | `OFFGRID_TRAEFIK_PASSWORD`                    | Password of Traefik panel. The panel is protected by basic authorization with user `traefik` and this password. | N/A                                |
 
 Many environment variables are handled by `docker-compose` automatically since inter-containers connection could established use container name solely, these environment variables are not listed above. So if you deploy Project Offgrid without the pre-defined `docker-compose.yml`, these unset variables may cause problems.
@@ -55,7 +56,7 @@ After all required environment variables are set, run:
 $ cd offgrid
 
 # if supervisor is not needed:
-$ docker-compose -up
+$ docker-compose up -d
 
 # if supervisor should be deployed: 
 $ docker-compose -f docker-compose.yml -f docker-compose.supervision.yml
