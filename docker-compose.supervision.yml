@@ -7,18 +7,26 @@ services:
     restart: always
     ports:
       - "127.0.0.1:9000:9000"
+    networks:
+      - offgrid
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/offgrid/portainer_data:/data
     labels:
       - "traefik.http.routers.portainer.rule=Host(`portainer.${OFFGRID_DOMAIN}`)"
-      - "traefik.http.routers.portainer.entrypoints=web,websecure"
+      - "traefik.http.middlewares.compress.compress=true"
+      - "traefik.http.routers.portainer.middlewares=compress"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls=true"
+      - "traefik.http.routers.portainer.tls.certresolver=mainresolver"
 
   netdata:
     image: netdata/netdata
     restart: always
     ports:
       - "127.0.0.1:19999:19999"
+    networks:
+      - offgrid
     volumes:
       - /etc/passwd:/host/etc/passwd:ro
       - /etc/group:/host/etc/group:ro
@@ -31,4 +39,12 @@ services:
       - apparmor:unconfined
     labels:
       - "traefik.http.routers.netdata.rule=Host(`netdata.${OFFGRID_DOMAIN}`)"
-      - "traefik.http.routers.netdata.entrypoints=web,websecure"
+      - "traefik.http.middlewares.compress.compress=true"
+      - "traefik.http.routers.netdata.middlewares=compress"
+      - "traefik.http.routers.netdata.entrypoints=websecure"
+      - "traefik.http.routers.netdata.tls=true"
+      - "traefik.http.routers.netdata.tls.certresolver=mainresolver"
+
+networks:
+  offgrid:
+    name: offgrid
