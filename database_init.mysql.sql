@@ -1,12 +1,5 @@
-create schema offgrid;
 create schema hydra;
 create schema grafana;
-
-#
-
-grant all privileges on offgrid.* to 'offgrid'@'%';
-
-flush privileges;
 
 #
 use offgrid;

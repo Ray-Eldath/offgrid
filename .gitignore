@@ -1,4 +1,4 @@
-.env
+.env**
 /offgrid
 *.ws.kts
 Experiment.*

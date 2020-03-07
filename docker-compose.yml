@@ -9,7 +9,7 @@ services:
       - --collation-server=utf8mb4_unicode_ci
     volumes:
       - ~/offgrid/db_data:/var/lib/mysql
-      - ./database_init.mysql.sql:/docker-entrypoint-initdb.d/dsatabase_init.mysql.sql:ro
+      - ./database_init.mysql.sql:/docker-entrypoint-initdb.d/database_init.mysql.sql:ro
     ports:
       - "127.0.0.1:3306:3306"
     networks:
@@ -17,6 +17,7 @@ services:
     restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=${OFFGRID_DATABASE_ROOT_PASSWORD}
+      - MYSQL_DATABASE=offgrid
       - MYSQL_USER=offgrid
       - MYSQL_PASSWORD=${OFFGRID_DATABASE_PASSWORD}
       - TZ=Asia/Shanghai
@@ -42,7 +43,7 @@ services:
       - mysql
     image: grafana/grafana:latest
     volumes:
-      - ~/offgrid/grafana_data:/var/lib/grafana
+      - ~/offgrid/grafana_data:/var/lib/grafana:Z
     ports:
       - "127.0.0.1:3000:3000"
     networks:
@@ -62,9 +63,9 @@ services:
       - GF_DATABASE_URL=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@mysql:3306/grafana
       - GF_DATABASE_TYPE=mysql
       - GF_SERVER_ROOT_URL=${OFFGRID_GRAFANA_HOST}
-      - GF_SERVER_DOMAIN=${OFFGRID_GRAFANA_DOMAIN}
+      - GF_SERVER_DOMAIN=grafana.${OFFGRID_DOMAIN}
     labels:
-      - "traefik.http.routers.grafana.rule=Host(`grafana`)"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${OFFGRID_DOMAIN}`)"
       - "traefik.http.routers.grafana.entrypoints=web,websecure"
 
   hydra:
@@ -142,13 +143,13 @@ services:
     restart: always
     environment:
       - OFFGRID_HOST=${OFFGRID_HOST}
-      - OFFGRID_HYDRA_HOST=${OFFGRID_HOST}/service/oauth
+      - OFFGRID_HYDRA_ADMIN_HOST=http://hydra:4445
       - OFFGRID_GRAPHITE_HOST=graphite
-      - OFFGRID_BACKEND_JDBC_URL=jdbc:mysql://database:3306/offgrid
+      - OFFGRID_BACKEND_JDBC_URL=jdbc:mysql://mysql:3306/offgrid
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID}
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET}
     labels:
-      - "traefik.http.routers.backend.rule=Host(`api`)"
+      - "traefik.http.routers.backend.rule=Host(`api.${OFFGRID_DOMAIN}`)"
       - "traefik.http.routers.backend.entrypoints=web,websecure"
 
   traefik:
@@ -164,17 +165,16 @@ services:
     restart: always
     command:
       - "--api.dashboard=true"
+      - "--api.insecure=true"
       - "--providers.docker=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.traefik.address=:8080"
+#      - "--entrypoints.traefik.address=:8080"
     labels:
-      - traefik.http.middlewares.traefik-auth.basicauth.users=traefik:${OFFGRID_TRAEFIK_PASSWORD}
-      - "traefik.http.middlewares.stripprefix-traefik.stripprefix.prefixes=/traefik"
-      - "traefik.http.routers.traefik.rule=PathPrefix(`/traefik`)"
-      - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.middlewares=stripprefix-traefik,compress,traefik-auth"
-      - "traefik.http.routers.traefik.entrypoints=traefik"
+#      - "traefik.http.middlewares.traefik-auth.basicauth.users=${OFFGRID_TRAEFIK_HASHED_PASSWORD}"
+#      - "traefik.http.routers.traefik.service=api@internal"
+#      - "traefik.http.routers.traefik.middlewares=compress,traefik-auth"
+#      - "traefik.http.routers.traefik.entrypoints=traefik"
       - "traefik.http.middlewares.compress.compress=true"
       - "traefik.http.routers.global.rule=HostRegexp(`{any:.+}`)"
       - "traefik.http.routers.global.entrypoints=web,websecure"

@@ -11,7 +11,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/offgrid/portainer_data:/data
     labels:
-      - "traefik.http.routers.portainer.rule=Host(`portainer`)"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${OFFGRID_DOMAIN}`)"
       - "traefik.http.routers.portainer.entrypoints=web,websecure"
 
   netdata:
@@ -30,5 +30,5 @@ services:
     security_opt:
       - apparmor:unconfined
     labels:
-      - "traefik.http.routers.netdata.rule=Host(`netdata`)"
+      - "traefik.http.routers.netdata.rule=Host(`netdata.${OFFGRID_DOMAIN}`)"
       - "traefik.http.routers.netdata.entrypoints=web,websecure"
