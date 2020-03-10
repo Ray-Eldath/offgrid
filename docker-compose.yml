@@ -50,6 +50,7 @@ services:
       - offgrid
     environment:
       - GF_AUTH_BASIC=false
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
       - GF_AUTH_GENERIC_OAUTH_ENABLED=true
       - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
       - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET}
@@ -66,8 +67,8 @@ services:
       - GF_SERVER_DOMAIN=grafana.${OFFGRID_DOMAIN}
     labels:
       - "traefik.http.routers.grafana.rule=Host(`grafana.${OFFGRID_DOMAIN}`)"
-      - "traefik.http.routers.grafana.middlewares=compress"
-      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.middlewares=compress,redirect-to-https"
+      - "traefik.http.routers.grafana.entrypoints=web,websecure"
       - "traefik.http.routers.grafana.tls=true"
       - "traefik.http.routers.grafana.tls.certresolver=mainresolver"
 
@@ -95,8 +96,8 @@ services:
       - "traefik.http.middlewares.stripprefix-hydra.stripprefix.prefixes=/service/oauth"
       - "traefik.http.services.hydra.loadbalancer.server.port=4444"
       - "traefik.http.routers.hydra.rule=Path(`/service/oauth`)"
-      - "traefik.http.routers.hydra.middlewares=stripprefix-hydra,compress"
-      - "traefik.http.routers.hydra.entrypoints=websecure"
+      - "traefik.http.routers.hydra.middlewares=stripprefix-hydra,compress,redirect-to-https"
+      - "traefik.http.routers.hydra.entrypoints=web,websecure"
       - "traefik.http.routers.hydra.tls=true"
       - "traefik.http.routers.hydra.tls.certresolver=mainresolver"
 
@@ -144,8 +145,8 @@ services:
     restart: always
     labels:
       - "traefik.http.routers.caddy.rule=Host(`${OFFGRID_DOMAIN}`)"
-      - "traefik.http.routers.caddy.middlewares=compress"
-      - "traefik.http.routers.caddy.entrypoints=websecure"
+      - "traefik.http.routers.caddy.middlewares=compress,redirect-to-https"
+      - "traefik.http.routers.caddy.entrypoints=web,websecure"
       - "traefik.http.routers.caddy.tls=true"
       - "traefik.http.routers.caddy.tls.certresolver=mainresolver"
 
@@ -153,8 +154,8 @@ services:
     depends_on:
       - mysql
     build: "."
-    #    volumes:
-    #      - ./offgrid/backend:/offgrid
+    volumes:
+      - ~/offgrid/backend_data/log:/offgrid/log
     ports:
       - "127.0.0.1:8190:8080"
     networks:
@@ -166,12 +167,17 @@ services:
       - OFFGRID_GRAPHITE_HOST=graphite
       - OFFGRID_BACKEND_JDBC_URL=jdbc:mysql://mysql:3306/offgrid
       - OFFGRID_DATABASE_PASSWORD=${OFFGRID_DATABASE_PASSWORD}
+      - OFFGRID_ALIYUN_DIRECTMAIL_REGION=${OFFGRID_ALIYUN_DIRECTMAIL_REGION}
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID}
       - OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET=${OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET}
     labels:
       - "traefik.http.routers.backend.rule=Host(`api.${OFFGRID_DOMAIN}`)"
-      - "traefik.http.routers.backend.middlewares=compress"
-      - "traefik.http.routers.backend.entrypoints=websecure"
+      - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=OPTIONS,GET,POST,PUT,PATCH,DELETE"
+      - "traefik.http.middlewares.cors.headers.accesscontrolalloworigin=${OFFGRID_HOST}"
+      - "traefik.http.middlewares.cors.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.cors.headers.addvaryheader=true"
+      - "traefik.http.routers.backend.middlewares=cors,compress,redirect-to-https"
+      - "traefik.http.routers.backend.entrypoints=web,websecure"
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=mainresolver"
 
@@ -196,16 +202,12 @@ services:
       - "--certificatesresolvers.mainresolver.acme.email=${OFFGRID_ACME_EMAIL}"
       - "--certificatesresolvers.mainresolver.acme.storage=/letsencrypt/acme.json"
     labels:
-      - "traefik.http.routers.http-catchall.rule=HostRegexp(`{host:.+}`)"
-      - "traefik.http.routers.http-catchall.entrypoints=web"
-      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
       - "traefik.http.middlewares.compress.compress=true"
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.traefik-auth.basicauth.users=${OFFGRID_TRAEFIK_HASHED_PASSWORD}"
       - "traefik.http.routers.traefik.rule=Host(`traefik.${OFFGRID_DOMAIN}`)"
       - "traefik.http.routers.traefik.service=api@internal"
-      - "traefik.http.routers.traefik.middlewares=compress,traefik-auth"
-      - "traefik.http.routers.traefik.entrypoints=websecure"
+      - "traefik.http.routers.traefik.middlewares=compress"
+      - "traefik.http.routers.traefik.entrypoints=web"
 
 networks:
   offgrid:

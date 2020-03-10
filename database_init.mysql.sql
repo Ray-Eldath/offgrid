@@ -4,7 +4,7 @@ create schema grafana;
 #
 use offgrid;
 
-create table User_Applications
+create table user_applications
 (
     id                       int auto_increment
         primary key,
@@ -19,18 +19,18 @@ create table User_Applications
         unique (email)
 );
 
-create table Users
+create table users
 (
     id       int auto_increment
         primary key,
-    state    tinyint default 0 not null,
-    username varchar(20)       not null,
-    email    varchar(50)       not null,
+    state    int default 0 not null,
+    username varchar(20)   not null,
+    email    varchar(50)   not null,
     constraint Users_email_unique
         unique (email)
 );
 
-create table Authorizations
+create table authorizations
 (
     user_id         int          not null
         primary key,
@@ -39,21 +39,21 @@ create table Authorizations
     last_login_time datetime     null,
     register_time   datetime     null,
     constraint fk_Authorizations_user_id_id
-        foreign key (user_id) references Users (id)
+        foreign key (user_id) references users (id)
             on delete cascade
 );
 
-create table Extra_Permissions
+create table extra_permissions
 (
     authorization_id int                  not null,
     permission_id    varchar(5)           not null,
     is_shield        tinyint(1) default 1 not null,
     constraint Extra_Permissions_Authorizations_user_id_fk
-        foreign key (authorization_id) references Authorizations (user_id)
+        foreign key (authorization_id) references authorizations (user_id)
             on delete cascade
 );
 
-create table Reset_Password_Applications
+create table reset_password_applications
 (
     id               int auto_increment
         primary key,
@@ -62,11 +62,11 @@ create table Reset_Password_Applications
     token            varchar(50) not null,
     request_time     datetime    not null,
     constraint Reset_Passwords_Authorizations_user_id_fk
-        foreign key (authorization_id) references Authorizations (user_id)
+        foreign key (authorization_id) references authorizations (user_id)
 );
 
-alter table Users
+alter table users
     auto_increment = 1000;
 
-alter table User_Applications
+alter table user_applications
     auto_increment = 1000;

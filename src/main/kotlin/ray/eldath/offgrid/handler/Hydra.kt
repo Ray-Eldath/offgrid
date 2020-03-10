@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit
 
 object Hydra {
     private val logger = LoggerFactory.getLogger("hydra.okhttp")
-    private val HYDRA_HOST = Core.getEnv("OFFGRID_HYDRA_ADMIN_HOST").trimEnd('/')
+    private val HYDRA_HOST = Core.getEnvSafe("OFFGRID_HYDRA_ADMIN_HOST").trimEnd('/')
 
     private val client by lazy {
         OkHttpClient.Builder().apply {

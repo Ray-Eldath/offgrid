@@ -8,7 +8,6 @@ import org.http4k.contract.contract
 import org.http4k.contract.openapi.ApiInfo
 import org.http4k.contract.openapi.v3.OpenApi3
 import org.http4k.core.*
-import org.http4k.filter.CorsPolicy
 import org.http4k.filter.DebuggingFilters
 import org.http4k.filter.MetricFilters
 import org.http4k.filter.ServerFilters
@@ -20,6 +19,7 @@ import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
+import ray.eldath.offgrid.component.ApiException
 import ray.eldath.offgrid.component.ApiExceptionHandler
 import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.component.Metrics
@@ -42,6 +42,7 @@ object Core {
     val security = BearerSecurity
     val credentials = BearerSecurity.credentials
 
+    private val logger = LoggerFactory.getLogger(javaClass)
     private val allRoutes = arrayListOf<ContractHandler>()
 
     init {
@@ -82,9 +83,9 @@ object Core {
         if (!debug)
             HikariConfig().apply {
                 poolName = "offgrid"
-                jdbcUrl = getEnv("OFFGRID_BACKEND_JDBC_URL")
+                jdbcUrl = getEnvSafe("OFFGRID_BACKEND_JDBC_URL")
                 username = "offgrid"
-                password = getEnv("OFFGRID_DATABASE_PASSWORD")
+                password = getEnvSafe("OFFGRID_DATABASE_PASSWORD")
                 addDataSourceProperty("cachePrepStmts", "true")
                 addDataSourceProperty("prepStmtCacheSize", "250")
                 metricRegistry = Metrics.registry
@@ -94,21 +95,26 @@ object Core {
 
     private const val ROOT = ""
     private val filterChain by lazy {
-        (if (debug) {
+        (if (debug)
             DebuggingFilters.PrintRequest(debugStream = true)
                 .also { System.err.println("filter PrintRequest is installed.") }
-                .then(ServerFilters.Cors(CorsPolicy(listOf("*"), listOf("*"), Method.values().toList())))
-                .also {
-                    System.err.println(
-                        "filter CORS with unsafe global permissive is installed. note that CORS may still needed " +
-                                "through inverse proxy in production, but global permissive should be limited to debug only."
-                    )
-                }
-        } else Filter.NoOp)
+        else Filter.NoOp)
+            .then(Filter { next -> { if (it.method == Method.OPTIONS) Response(Status.OK) else next(it) } })
+            .then(ApiExceptionHandler.filter)
             .then(ServerFilters.CatchLensFailure)
+            .then(Filter { next ->
+                {
+                    try {
+                        next(it)
+                    } catch (e: Exception) {
+                        if (e !is ApiException)
+                            logger.error("non-ApiException thrown when handling request: $it", e)
+                        throw e
+                    }
+                }
+            })
             .then(MetricFilters.Server.RequestCounter(Metrics.registry))
             .then(MetricFilters.Server.RequestTimer(Metrics.registry))
-            .then(ApiExceptionHandler.filter)
     }
 
     @JvmStatic
@@ -152,9 +158,12 @@ object Core {
         System.setProperty("$ENV_PREFIX.loaded", "true")
     }
 
-    fun getEnv(key: String): String {
+    fun getEnv(key: String): String? {
         if (System.getProperty("$ENV_PREFIX.loaded") == null)
             loadEnv()
-        return System.getenv(key) ?: System.getProperty("offgrid.env.$key")
+        return (System.getenv(key) ?: System.getProperty("offgrid.env.$key")).ifBlank { null }
     }
+
+    fun getEnvSafe(key: String): String =
+        getEnv(key) ?: throw NullPointerException("environment variables $key is not set")
 }

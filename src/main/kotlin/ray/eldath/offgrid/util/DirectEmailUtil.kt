@@ -12,22 +12,23 @@ import ray.eldath.offgrid.core.Core
 
 object DirectEmailUtil {
     private val logger = LoggerFactory.getLogger(javaClass)
+    private val REGION = Core.getEnv("OFFGRID_ALIYUN_DIRECTMAIL_REGION") ?: "cn-hangzhou"
 
-    private val aliyunClient by lazy {
+    private val aliyunClient =
         DefaultProfile.getProfile(
-            "cn-hangzhou",
-            Core.getEnv("OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID"),
-            Core.getEnv("OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET") // require permission: AliyunDirectMailFullAccess...... :-(
-        ).let {
-            DefaultAcsClient(it)
-        }
-    }
+            REGION,
+            Core.getEnvSafe("OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID"),
+            Core.getEnvSafe("OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET") // require permission: AliyunDirectMailFullAccess...... :-(
+        ).also {
+            if (REGION != "cn-hangzhou")
+                DefaultProfile.addEndpoint(REGION, "Dm", "dm.$REGION.aliyuncs.com")
+        }.let { DefaultAcsClient(it) }
 
     suspend fun sendEmail(
         subject: String,
         aliyunTag: String,
         toAddress: String,
-        fromAlias: String = "[no reply] Offgrid User Center",
+        fromAlias: String = "Offgrid System",
         textBody: () -> String
     ) = coroutineScope {
         if (Core.debug) {
@@ -35,10 +36,10 @@ object DirectEmailUtil {
             return@coroutineScope
         }
 
-        fun warn(e: ClientException, type: String = "ClientException"): Unit =
+        fun error(e: ClientException, type: String = "ClientException"): Unit =
             ("AliyunDirectMail: $type(errCode: ${e.errCode}) thrown when sendEmail to email address $toAddress " +
                     "with subject $subject and tag $aliyunTag").let {
-                logger.warn(it, e)
+                logger.error(it, e)
 
                 throw (ErrorCodes.sendEmailFailed(toAddress, it + "\n $type: ${e.asJsonString()}"))()
             }
@@ -61,13 +62,13 @@ object DirectEmailUtil {
                 val log =
                     "AliyunDirectMail: unsuccessful send attempt to $info with response: \n" +
                             "(${resp.status}) \n ${resp.httpContentString}"
-                logger.warn(log)
+                logger.error(log)
                 throw (ErrorCodes.sendEmailFailed(toAddress, log))()
             }
         } catch (e: ServerException) {
-            warn(e, "ServerException")
+            error(e, "ServerException")
         } catch (e: ClientException) {
-            warn(e)
+            error(e)
         }
     }
 }

@@ -15,7 +15,7 @@ open class UrlToken(open val email: String, open val token: String = generateTok
     val url: String by lazy {
         val urlToken = Jackson.asJsonString(SerializableUrlToken(email, token, route)).base64Url()
 
-        "${Core.getEnv("OFFGRID_HOST")}/$route/$urlToken"
+        "${Core.getEnvSafe("OFFGRID_HOST")}/$route/$urlToken"
     }
 
     private data class SerializableUrlToken(val email: String, val token: String, val attempt: String) {

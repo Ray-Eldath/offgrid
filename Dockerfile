@@ -1,4 +1,4 @@
-FROM openjdk:11-jdk
+FROM adoptopenjdk/openjdk13-openj9:alpine
 LABEL maintainer="Ray Eldath <ray.eldath@outlook.com>"
 ENV TZ='Asia/Shanghai'
 COPY build/libs/offgrid*all.jar /offgrid/

@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.3.61"
+    kotlin("jvm") version "1.3.70"
     id("application")
     id("com.github.johnrengelman.shadow") version "5.2.0"
     id("nu.studer.jooq") version "4.1"
@@ -11,7 +11,7 @@ version = "1.0-SNAPSHOT"
 val http4kVersion = "3.226.0"
 val micrometerVersion = "1.3.3"
 val logbackVersion = "1.2.3"
-val striktVersion = "0.23.4"
+val striktVersion = "0.24.0"
 val jupiterVersion = "5.6.0"
 val databaseConnector = "mysql:mysql-connector-java:8.0.19"
 
