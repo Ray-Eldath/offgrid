@@ -16,23 +16,23 @@ enum class Permission(
     RejectUserApplication("UA_R", ListUserApplication),
     UserApplication("UA", ApproveUserApplication, RejectUserApplication),
 
-    ListProviderRegistry("PR_L"),
-    CreateProviderRegistry("PR_C"),
-    UpdateProviderRegistry("PR_U"),
-    DeleteProviderRegistry("PR_D"),
-    ProviderRegistry(
-        "PR",
-        ListProviderRegistry,
-        CreateProviderRegistry,
-        UpdateProviderRegistry,
-        DeleteProviderRegistry
+    ListDataSource("DS_L"),
+    CreateDataSource("DS_C"),
+    ModifyDataSource("DS_M"),
+    DeleteDataSource("DS_D"),
+    DataSource(
+        "DS",
+        ListDataSource,
+        CreateDataSource,
+        ModifyDataSource,
+        DeleteDataSource
     ),
 
-    ListModelRegistry("MR_L"),
-    CreateModelRegistry("MR_C"),
-    UpdateModelRegistry("MR_U"),
-    DeleteModelRegistry("MR_D"),
-    ModelRegistry("MR", ListModelRegistry, CreateModelRegistry, UpdateModelRegistry, DeleteModelRegistry),
+    ListConsumer("C_L"),
+    CreateConsumer("C_C"),
+    ModifyConsumer("C_M"),
+    DeleteConsumer("C_D"),
+    Consumer("C", ListConsumer, CreateConsumer, ModifyConsumer, DeleteConsumer),
 
     SelfComputationResult("CRs"),
     AllComputationResult("CRa", SelfComputationResult),
@@ -44,7 +44,7 @@ enum class Permission(
     PanelMetrics("M_P"),
     Metrics("M", InternalMetrics, PanelMetrics),
 
-    Root("ROOT", User, UserApplication, ProviderRegistry, ModelRegistry, ComputationResult, Graph, Metrics);
+    Root("ROOT", User, UserApplication, DataSource, Consumer, ComputationResult, Graph, Metrics);
 
     val rootId = id.replaceAfter("_", "").replace("_", "")
 
@@ -71,8 +71,8 @@ enum class UserRole(val id: Int, vararg defaultPermissions: Permission) {
         Permission.User,
         Permission.UserApplication,
         Permission.Graph,
-        Permission.ProviderRegistry,
-        Permission.ModelRegistry
+        Permission.DataSource,
+        Permission.Consumer
     ), // UserAdmin + OperationAdmin
     UserAdmin(
         31,
@@ -82,8 +82,8 @@ enum class UserRole(val id: Int, vararg defaultPermissions: Permission) {
     OperationAdmin(
         32,
         Permission.Graph,
-        Permission.ProviderRegistry,
-        Permission.ModelRegistry
+        Permission.DataSource,
+        Permission.Consumer
     ),
 
     MetricsAdmin(33, Permission.Metrics),

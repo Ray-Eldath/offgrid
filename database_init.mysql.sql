@@ -65,8 +65,59 @@ create table reset_password_applications
         foreign key (authorization_id) references authorizations (user_id)
 );
 
+create table entities
+(
+    id                   int auto_increment
+        primary key,
+    name                 varchar(20)  null,
+    type                 int          not null,
+    access_key_id        varchar(50)  not null,
+    access_key_secret    varchar(150) null,
+    create_time          datetime     not null,
+    last_connection_time datetime     null,
+    constraint entities_access_id_uindex
+        unique (access_key_id),
+    constraint entities_name_uindex
+        unique (name)
+);
+
+create table entity_routes
+(
+    id      int auto_increment
+        primary key,
+    state   int default 0 not null,
+    from_id int           not null,
+    to_id   int           not null,
+    constraint entity_routes_entities_id_fk
+        foreign key (from_id) references entities (id)
+            on delete cascade,
+    constraint entity_routes_entities_id_fk_2
+        foreign key (to_id) references entities (id)
+            on delete cascade
+);
+
+create table entity_tags
+(
+    id        int auto_increment
+        primary key,
+    entity_id int         null,
+    tag       varchar(20) null,
+    constraint entity_tags_entities_id_fk
+        foreign key (entity_id) references entities (id)
+            on delete cascade
+);
+
 alter table users
     auto_increment = 1000;
 
 alter table user_applications
+    auto_increment = 1000;
+
+alter table entities
+    auto_increment = 1000;
+
+alter table entity_routes
+    auto_increment = 1000;
+
+alter table entity_tags
     auto_increment = 1000;

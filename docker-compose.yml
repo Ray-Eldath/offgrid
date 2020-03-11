@@ -52,7 +52,7 @@ services:
       - GF_AUTH_BASIC=false
       - GF_AUTH_DISABLE_LOGIN_FORM=true
       - GF_AUTH_GENERIC_OAUTH_ENABLED=true
-      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=grafana
+      - GF_AUTH_GENERIC_OAUTH_CLIENT_ID=${OFFGRID_GRAFANA_OAUTH_CLIENT_ID}
       - GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET=${OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET}
       - GF_AUTH_GENERIC_OAUTH_SCOPES=openid profile grafana
       - GF_AUTH_GENERIC_OAUTH_AUTH_URL=${OFFGRID_HOST}/service/oauth/oauth2/auth
@@ -87,15 +87,16 @@ services:
       serve all --dangerous-force-http --dangerous-allow-insecure-redirect-urls=${OFFGRID_GRAFANA_HOST}/login/generic_oauth
     environment:
       - URLS_SELF_ISSUER=${OFFGRID_HOST}/service/oauth
-      - URLS_LOGIN=${OFFGRID_HOST}/hydra/login
-      - URLS_CONSENT=${OFFGRID_HOST}/hydra/consent
-      - URLS_LOGOUT=${OFFGRID_HOST}/hydra/logout # currently unsupported
+      - URLS_LOGIN=${OFFGRID_HOST}/oauth/login
+      - URLS_CONSENT=${OFFGRID_HOST}/oauth/consent
+      - URLS_LOGOUT=${OFFGRID_HOST}/oauth/logout # currently unsupported
       - DSN=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@tcp(mysql:3306)/hydra?max_conns=20&max_idle_conns=4
       - SECRETS_SYSTEM=${OFFGRID_HYDRA_SECRETS_SYSTEM}
     labels:
       - "traefik.http.middlewares.stripprefix-hydra.stripprefix.prefixes=/service/oauth"
       - "traefik.http.services.hydra.loadbalancer.server.port=4444"
-      - "traefik.http.routers.hydra.rule=Path(`/service/oauth`)"
+      - "traefik.http.routers.hydra.priority=10000"
+      - "traefik.http.routers.hydra.rule=PathPrefix(`/service/oauth`)"
       - "traefik.http.routers.hydra.middlewares=stripprefix-hydra,compress"
       - "traefik.http.routers.hydra.entrypoints=websecure"
       - "traefik.http.routers.hydra.tls=true"
@@ -124,11 +125,13 @@ services:
     networks:
       - offgrid
     command: |
-      clients create
+      clients create \
       --skip-tls-verify \
-      --id grafana \
+      --id ${OFFGRID_GRAFANA_OAUTH_CLIENT_ID} \
       --secret ${OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET} \
+      --name grafana \
       --grant-types authorization_code,refresh_token,client_credentials,implicit \
+      --token-endpoint-auth-method client_secret_post \
       --response-types token,code,id_token \
       --scope openid,profile,grafana \
       --callbacks ${OFFGRID_GRAFANA_HOST}/login/generic_oauth

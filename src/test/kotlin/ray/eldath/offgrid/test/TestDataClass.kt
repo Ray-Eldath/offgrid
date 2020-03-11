@@ -49,13 +49,13 @@ class TestDataClass {
 
         @Test
         fun `test ModelRegistry expand`() {
-            expectThat(ModelRegistry.expand().toList())
+            expectThat(Consumer.expand().toList())
                 .containsExactlyInAnyOrder(
-                    ModelRegistry,
-                    ListModelRegistry,
-                    CreateModelRegistry,
-                    UpdateModelRegistry,
-                    DeleteModelRegistry
+                    Consumer,
+                    ListConsumer,
+                    CreateConsumer,
+                    ModifyConsumer,
+                    DeleteConsumer
                 )
         }
     }

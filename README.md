@@ -61,7 +61,8 @@ Note that all URL-staff should omit the tailing slash mark (`/`).
 | `OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_ID`     | `AccessKeyId` of Aliyun DirectMail service.                  | N/A                                |
 | `OFFGRID_ALIYUN_DIRECTMAIL_ACCESS_KEY_SECRET` | `AccessKeySecret` of Aliyun DirectMail service.              | N/A                                |
 | `OFFGRID_GRAFANA_HOST`                        | Host of Grafana panel public service. **Should in HTTPS protocol**, otherwise automatically initialization of Hydra will failed. | `https://grafana.offgrid.org`      |
-| `OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET` | Secret of OAuth client of Grafana, will be registered in Hydra. | N/A |
+|`OFFGRID_GRAFANA_OAUTH_CLIENT_ID`|Client of OAuth client for Grafana which will be registered in Hydea. Should be generated with [UUID generator](https://www.uuidgenerator.net/).|`fd74b5fc-1132-458e-80ac-404e01da8bfd`|
+| `OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET` | Secret of OAuth client for Grafana which will be registered in Hydra. | N/A |
 | `OFFGRID_TRAEFIK_HASHED_PASSWORD`             | **Hashed** Password of Traefik panel, **should be generated with the procedure described following.** The panel is protected by basic authorization with user `traefik` and this password. | N/A                                |
 |`OFFGRID_ACME_EMAIL`|Used for obtain HTTPS certificate from Let’s Encrypt with ACME protocol. Default LTS Challenge is used.|`alpha.beta@omega`|
 

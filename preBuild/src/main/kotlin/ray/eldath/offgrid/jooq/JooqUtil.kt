@@ -9,7 +9,10 @@ class SingularPojoGenerationStrategy : DefaultGeneratorStrategy() {
         val str: String = super.getJavaClassName(definition, mode)
 
         if (mode == GeneratorStrategy.Mode.POJO)
-            return str.removeSuffix("s")
+            return if (str.endsWith("ies"))
+                str.removeSuffix("ies") + "y"
+            else
+                str.removeSuffix("s")
         return str
     }
 }
