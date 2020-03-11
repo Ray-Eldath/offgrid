@@ -55,6 +55,7 @@ class Register : ContractHandler {
             transaction {
                 update(ua)
                     .set(ua.LAST_REQUEST_TOKEN_TIME, LocalDateTime.now())
+                    .set(ua.EMAIL_CONFIRMATION_TOKEN, urlToken.token)
                     .where(ua.EMAIL.eq(email))
                     .execute()
             }
@@ -147,8 +148,7 @@ object ConfirmEmail {
         private val requestLens = Body.auto<UsernamePassword>().toLens()
 
         private fun handler(inboundToken: String) = { req: Request ->
-            val json = requestLens(req)
-            json.check()
+            val json = requestLens(req).also { it.check() }
             val plainPassword = json.password.toByteArray()
             val application = validateUrlToken(ConfirmUrlToken.parse(inboundToken))
 
