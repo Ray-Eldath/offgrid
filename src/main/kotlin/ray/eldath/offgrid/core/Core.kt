@@ -66,6 +66,7 @@ object Core {
         allRoutes += UnbanUser(credentials, security)
         allRoutes += DeleteUser(credentials, security)
 
+        allRoutes += ListDataSource(credentials, security)
         allRoutes += CreateDataSource(credentials, security)
         allRoutes += ModifyDataSource(credentials, security)
 
