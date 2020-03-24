@@ -21,10 +21,10 @@ class Self(credentials: Credentials, private val configuredSecurity: Security) :
                 user.state.id,
                 user.username,
                 user.email,
-                authorization.role.toOutbound(),
-                permissions.toOutbound(),
-                lastLoginTime = authorization.lastLoginTime,
-                registerTime = authorization.registerTime
+                user.role.toOutbound(),
+                permissions = permissions.toOutbound(),
+                lastLoginTime = user.lastLoginTime,
+                registerTime = user.registerTime
             )
         }.let { Response(Status.OK).with(responseLens of it) }
     }

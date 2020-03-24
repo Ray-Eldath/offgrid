@@ -11,7 +11,7 @@ import ray.eldath.offgrid.component.*
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.BearerSecurity.bearerToken
 import ray.eldath.offgrid.component.BearerSecurity.safeBearerToken
-import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
+import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.model.EmailRequest
 import ray.eldath.offgrid.model.OutboundUser
 import ray.eldath.offgrid.model.toOutbound
@@ -44,14 +44,14 @@ class Login : ContractHandler {
                 authenticate(email, plainPassword)
             } else current
 
-        val (user, auth, _) = inbound
+        val (user, _) = inbound
 
         transaction {
-            val a = Authorizations.AUTHORIZATIONS
+            val u = Users.USERS
 
-            update(a)
-                .set(a.LAST_LOGIN_TIME, LocalDateTime.now())
-                .where(a.USER_ID.eq(user.id))
+            update(u)
+                .set(u.LAST_LOGIN_TIME, LocalDateTime.now())
+                .where(u.ID.eq(user.id))
                 .execute()
         }
 
@@ -63,10 +63,10 @@ class Login : ContractHandler {
                     user.state.id,
                     username,
                     email,
-                    auth.role.toOutbound(),
+                    role.toOutbound(),
                     inbound.permissions.toOutbound(),
-                    lastLoginTime = auth.lastLoginTime,
-                    registerTime = auth.registerTime
+                    lastLoginTime = lastLoginTime,
+                    registerTime = registerTime
                 )
             }
 
@@ -125,8 +125,8 @@ class Login : ContractHandler {
                     else -> ErrorCodes.USER_NOT_FOUND
                 }
             else {
-                val i: InboundUser = either.rightOrThrow.rightOrThrow
-                if (!Argon2.verify(i.authorization.hashedPassword, plainPassword))
+                val (user, _) = either.rightOrThrow.rightOrThrow
+                if (!Argon2.verify(user.hashedPassword, plainPassword))
                     ErrorCodes.USER_NOT_FOUND
                 else null
             }) or either.right

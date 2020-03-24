@@ -15,10 +15,8 @@ import org.http4k.lens.int
 import org.http4k.lens.string
 import org.jooq.Condition
 import ray.eldath.offgrid.component.UserRegistrationStatus.Companion.fetchByEmail
-import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.Users
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.handler.UsersHandler.checkUserId
 import ray.eldath.offgrid.model.*
@@ -72,7 +70,6 @@ class ListUsers(credentials: Credentials, private val configuredSecurity: Securi
 
         transaction {
             val u = Users.USERS
-            val a = Authorizations.AUTHORIZATIONS
             val ep = ExtraPermissions.EXTRA_PERMISSIONS
 
             val conditions = arrayListOf<Condition>().also {
@@ -87,12 +84,12 @@ class ListUsers(credentials: Credentials, private val configuredSecurity: Securi
                 if (role != null)
                     it +=
                         if (permissionRoles == null)
-                            a.ROLE.eq(role)
+                            u.ROLE.eq(role)
                         else
-                            a.ROLE.`in`(permissionRoles.also { r -> r.add(role) })
+                            u.ROLE.`in`(permissionRoles.also { r -> r.add(role) })
                 if (permission != null)
                     it +=
-                        a.ROLE.`in`(permissionRoles).and(
+                        u.ROLE.`in`(permissionRoles).and(
                             ep.PERMISSION_ID.isNull.orNot(
                                 ep.PERMISSION_ID.eq(permission).and(ep.IS_SHIELD.isTrue)
                             )
@@ -103,30 +100,25 @@ class ListUsers(credentials: Credentials, private val configuredSecurity: Securi
                         )
             }
 
-            val prefix = selectDistinct(u.fields().toMutableList().also { it.addAll(a.fields()) })
+            val prefix = selectDistinct()
                 .from(u)
-                .innerJoin(a).on(u.ID.eq(a.USER_ID))
-                .leftJoin(ep).on(ep.AUTHORIZATION_ID.eq(a.USER_ID))
+                .leftJoin(ep).on(ep.USER_ID.eq(u.ID))
                 .where(conditions)
 
             ListResponse(
                 total = fetchCount(prefix),
                 result = prefix.orderBy(u.ID).limit(pageSize).offset((page - 1) * pageSize)
-                    .fetchGroups(
-                        { it.into(u).into(User::class.java) },
-                        { it.into(a).into(Authorization::class.java) })
-                    ?.filterValues { it.size == 1 }
-                    ?.mapValues { it.value[0] }
+                    .fetch { it.into(u).into(User::class.java) }
                     .orEmpty()
-                    .map { (user, auth) ->
+                    .map {
                         ListResponseEntry(
-                            user.id,
-                            user.state.id,
-                            user.username,
-                            user.email,
-                            auth.role.toOutbound(),
-                            lastLoginTime = auth.lastLoginTime,
-                            registerTime = auth.registerTime
+                            it.id,
+                            it.state.id,
+                            it.username,
+                            it.email,
+                            it.role.toOutbound(),
+                            lastLoginTime = it.lastLoginTime,
+                            registerTime = it.registerTime
                         )
                     }
             )
@@ -178,7 +170,6 @@ class ModifyUser(private val credentials: Credentials, private val configuredSec
 
         transaction {
             val u = Users.USERS
-            val a = Authorizations.AUTHORIZATIONS
             val ep = ExtraPermissions.EXTRA_PERMISSIONS
 
             if (json.username != null || json.email != null)
@@ -191,18 +182,18 @@ class ModifyUser(private val credentials: Credentials, private val configuredSec
                 }.update()
 
             if (json.role != null)
-                newRecord(a).apply {
-                    this.userId = userId
+                newRecord(u).apply {
+                    id = userId
                     role = UserRole.fromId(json.role)
                 }.update()
 
             if (json.extraPermissions != null) {
                 deleteFrom(ep)
-                    .where(ep.AUTHORIZATION_ID.eq(userId)).execute()
+                    .where(ep.USER_ID.eq(userId)).execute()
 
                 json.extraPermissions.map {
                     newRecord(ep).apply {
-                        authorizationId = userId
+                        this.userId = userId
                         permissionId = Permission.fromId(it.id)
                         isShield = it.isShield
                     }

@@ -13,7 +13,6 @@ import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.Argon2
-import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ResetPasswordApplications
 import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ResetPasswordApplication
@@ -51,7 +50,7 @@ object ResetPassword {
                 if (user != null) {
                     newRecord(rpa).apply {
                         this.email = email
-                        authorizationId = user.id
+                        userId = user.id
                         token = urlToken.token
                         requestTime = LocalDateTime.now()
                     }.insert()
@@ -152,22 +151,22 @@ object ResetPassword {
             UsernamePassword.checkPassword(password)
 
             transaction {
-                val a = Authorizations.AUTHORIZATIONS
+                val u = Users.USERS
                 val rpa = ResetPasswordApplications.RESET_PASSWORD_APPLICATIONS
 
-                update(a)
-                    .set(a.HASHED_PASSWORD, Argon2.hash(password.toByteArray()))
-                    .where(a.USER_ID.eq(reset.authorizationId)).execute()
+                update(u)
+                    .set(u.HASHED_PASSWORD, Argon2.hash(password.toByteArray()))
+                    .where(u.ID.eq(reset.userId)).execute()
 
                 deleteFrom(rpa)
-                    .where(rpa.ID.eq(reset.id)).execute()
+                    .where(rpa.USER_ID.eq(reset.userId)).execute()
             }
 
             Response(Status.OK)
         }
 
         override fun compile(): ContractRoute =
-            "/reset_password/" / inboundTokenPath meta {
+            "/reset_password" / inboundTokenPath meta {
                 summary = "Submit the new password"
                 description = "Still, the URL token will be verified first."
                 tags += RouteTag.ResetPassword

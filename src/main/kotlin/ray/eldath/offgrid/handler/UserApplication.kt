@@ -15,7 +15,6 @@ import org.http4k.lens.Path
 import org.http4k.lens.Query
 import org.http4k.lens.int
 import org.jooq.Condition
-import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
 import ray.eldath.offgrid.generated.offgrid.tables.Users
@@ -136,26 +135,21 @@ class ApproveUserApplication(private val credentials: Credentials, private val c
             val application = UserApplicationHandler.getByIdChecked(id)
             val user = newRecord(Users.USERS).apply {
                 state = UserState.Normal
-                username = application.username
                 email = application.email
-            }
-            user.insert()
-
-            val authorization = newRecord(Authorizations.AUTHORIZATIONS).apply {
-                userId = user.id
+                username = application.username
                 hashedPassword = application.hashedPassword
                 this.role = role
                 registerTime = LocalDateTime.now()
             }
-            authorization.insert()
+            user.insert()
 
             ep.map {
                 newRecord(ExtraPermissions.EXTRA_PERMISSIONS).apply {
-                    authorizationId = authorization.userId
+                    userId = user.id
                     permissionId = Permission.fromId(it.id)
                     isShield = it.isShield
                 }
-            }.let { batchInsert(it) }
+            }.let { batchInsert(it).execute() }
 
             deleteFrom(ua)
                 .where(ua.EMAIL.eq(application.email)).execute()

@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "1.3.70"
+    kotlin("jvm") version "1.3.71"
     id("application")
     id("com.github.johnrengelman.shadow") version "5.2.0"
     id("nu.studer.jooq") version "4.1"
@@ -42,7 +42,7 @@ dependencies {
     implementation("de.mkammerer:argon2-jvm:2.6")
     implementation("com.github.ben-manes.caffeine:caffeine:2.8.1")
     implementation("commons-validator:commons-validator:1.6")
-    implementation("org.codehaus.groovy:groovy:3.0.0-rc-3")
+    implementation("org.codehaus.groovy:groovy:3.0.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3")
 
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
