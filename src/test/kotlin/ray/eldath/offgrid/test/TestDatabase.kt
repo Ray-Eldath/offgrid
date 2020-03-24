@@ -5,7 +5,6 @@ import org.junit.jupiter.api.TestInstance.Lifecycle
 import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.core.Core.enableDebug
 import ray.eldath.offgrid.core.Core.jooqContext
-import ray.eldath.offgrid.generated.offgrid.tables.Authorizations.AUTHORIZATIONS
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions.EXTRA_PERMISSIONS
 import ray.eldath.offgrid.generated.offgrid.tables.Users.USERS
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
@@ -18,6 +17,7 @@ import strikt.assertions.contains
 import strikt.assertions.isEqualTo
 import strikt.assertions.isNotNull
 import strikt.assertions.isNull
+import java.time.LocalDateTime
 
 @TestInstance(Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -36,29 +36,23 @@ object TestDatabase {
             val user = newRecord(USERS).apply {
                 username = "offgrid test"
                 email = "test@offgrid.ray-eldath.me"
+                role = UserRole.Root
+                hashedPassword = Context.hashedPassword
+                registerTime = LocalDateTime.now()
             }
             user.store()
+
             val executed = user.id
             println("inserted userId: $executed")
 
-            val auth = newRecord(AUTHORIZATIONS).apply {
-                userId = executed
-                role = UserRole.Root
-                hashedPassword = Context.hashedPassword
-            }
-            auth.insert()
-            println("inserted authId: ${auth.userId}")
-
-            expectThat(auth.userId).isEqualTo(executed)
-
             val extra1 = newRecord(EXTRA_PERMISSIONS).apply {
-                authorizationId = auth.userId
+                userId = executed
                 permissionId = Permission.ComputationResult
                 isShield = true
             }
 
             val extra2 = newRecord(EXTRA_PERMISSIONS).apply {
-                authorizationId = auth.userId
+                userId = executed
                 permissionId = Permission.SelfComputationResult
                 isShield = false
             }
@@ -80,14 +74,14 @@ object TestDatabase {
                 expectThat(topRight.left).isNull()
                 expectThat(topRight.right).isNotNull()
 
-                val (user, auth, list) = topRight.rightOrThrow
-                val authId = auth.userId
+                val (user, list) = topRight.rightOrThrow
+                val userId = user.id
 
                 that(user.email).isEqualTo("test@offgrid.ray-eldath.me")
-                that(auth.role).isEqualTo(UserRole.Root)
+                that(user.role).isEqualTo(UserRole.Root)
                 that(list).contains(
-                    ExtraPermission(authId, Permission.ComputationResult, true),
-                    ExtraPermission(authId, Permission.SelfComputationResult, false)
+                    ExtraPermission(userId, Permission.ComputationResult, true),
+                    ExtraPermission(userId, Permission.SelfComputationResult, false)
                 )
             }
         }

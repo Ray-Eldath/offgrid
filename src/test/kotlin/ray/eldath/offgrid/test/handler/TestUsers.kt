@@ -7,7 +7,6 @@ import org.http4k.core.with
 import org.junit.jupiter.api.*
 import ray.eldath.offgrid.core.Core.credentials
 import ray.eldath.offgrid.core.Core.security
-import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.records.UsersRecord
@@ -22,6 +21,7 @@ import strikt.api.expectThat
 import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.isEmpty
 import java.net.URLEncoder
+import java.time.LocalDateTime
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -82,7 +82,7 @@ class TestUsers {
         rootBearer
     }
 
-    private val usernameEmail = mapOf(
+    private val usernameEmail = listOf(
         "offgrid test" to "omega@alpha.com",
         "foo bar" to "alpha@omega.com",
         "bar foo" to "beta@alpha.com",
@@ -113,30 +113,23 @@ class TestUsers {
 
         transaction {
             val u = Users.USERS
-            val a = Authorizations.AUTHORIZATIONS
             val ep = ExtraPermissions.EXTRA_PERMISSIONS
 
-            usernameEmail.mapTo(users) {
+            usernameEmail.mapIndexedTo(users) { i, (un, e) ->
                 newRecord(u).apply {
-                    username = it.key
-                    email = it.value
-                }
-            }
-            users.forEach { it.store() }
-
-            users.mapIndexed { i, record ->
-                newRecord(a).apply {
-                    userId = record.id
+                    username = un
+                    email = e
                     hashedPassword = Context.hashedPassword
                     role = roles[i]
+                    registerTime = LocalDateTime.now()
                 }
-            }.forEach { it.insert() }
+            }.forEach { it.insert() } // shouldn't use batchInsert here.
 
             permissions.mapIndexed { i, p ->
                 if (p.isNotEmpty())
                     p.map {
                         newRecord(ep).apply {
-                            authorizationId = users[i].id
+                            userId = users[i].id
                             permissionId = it.first
                             isShield = it.second
                         }

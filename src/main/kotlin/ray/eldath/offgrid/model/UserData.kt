@@ -49,7 +49,7 @@ data class OutboundUser(
     val role: OutboundRole,
     val permissions: Collection<OutboundPermission>,
     val lastLoginTime: LocalDateTime? = null,
-    val registerTime: LocalDateTime? = null,
+    val registerTime: LocalDateTime,
     val avatarUrl: String = avatarUrl(email)
 ) {
 

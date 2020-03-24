@@ -1,10 +1,8 @@
 package ray.eldath.offgrid.component
 
-import ray.eldath.offgrid.generated.offgrid.tables.Authorizations
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
 import ray.eldath.offgrid.generated.offgrid.tables.Users
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
@@ -52,30 +50,23 @@ enum class UserRegistrationStatus(val code: Int) {
         private fun fetchInboundUser(email: String): Optional<InboundUser> =
             transaction {
                 val u = Users.USERS
-                val a = Authorizations.AUTHORIZATIONS
                 val e = ExtraPermissions.EXTRA_PERMISSIONS
 
                 val optionalUser = select()
                     .from(u)
-                    .innerJoin(a).onKey()
                     .where(u.EMAIL.eq(email))
-                    .fetchOptional {
-                        Pair(
-                            it.into(u).into(User::class.java),
-                            it.into(a).into(Authorization::class.java)
-                        )
-                    }
+                    .fetchOptional { it.into(u).into(User::class.java) }
                 if (optionalUser.isEmpty)
                     Optional.empty()
                 else {
-                    val (user, auth) = optionalUser.get()
+                    val user = optionalUser.get()
 
                     val list = select()
                         .from(e)
-                        .innerJoin(a).on(e.AUTHORIZATION_ID.eq(a.USER_ID))
+                        .innerJoin(u).on(e.USER_ID.eq(u.ID))
                         .fetch { it.into(e).into(ExtraPermission::class.java) }
 
-                    Optional.of(InboundUser(user, auth, list))
+                    Optional.of(InboundUser(user, list))
                 }
             }
     }

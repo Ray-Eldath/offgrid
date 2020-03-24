@@ -5,11 +5,9 @@ import org.junit.jupiter.api.Test
 import ray.eldath.offgrid.component.ApplicationOrInbound
 import ray.eldath.offgrid.component.InboundUser
 import ray.eldath.offgrid.component.UserRegistrationStatus
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.handler.Login
 import ray.eldath.offgrid.test.Context.application
-import ray.eldath.offgrid.test.Context.hashedPassword
 import ray.eldath.offgrid.test.Context.inbound
 import ray.eldath.offgrid.test.Context.password
 import ray.eldath.offgrid.test.Context.user
@@ -28,7 +26,6 @@ import strikt.assertions.containsExactlyInAnyOrder
 import strikt.assertions.failed
 import strikt.assertions.isEqualTo
 import strikt.assertions.succeeded
-import java.time.LocalDateTime
 
 class TestDataClass {
 
@@ -80,15 +77,26 @@ class TestDataClass {
             expectCatching { inbound.requirePermission(User, DeleteUser) }.failed()
                 .isEqualTo(permissionDeniedException(User, DeleteUser)).println()
 
-            expectCatching { inbound.requirePermission(ComputationResult) }.failed()
-                .isEqualTo(permissionDeniedException(ComputationResult)).println()
+            expectCatching { inbound.requirePermission(Permission.ComputationResult) }.failed()
+                .isEqualTo(permissionDeniedException(Permission.ComputationResult)).println()
         }
 
         @Test
         fun `test success requirePermission`() {
-            val now = LocalDateTime.now()
-            val auth = Authorization(1, hashedPassword, UserRole.MetricsAdmin, now, now)
-            val inbound = InboundUser(user, auth, listOf(ExtraPermission(1, User, false)))
+            val testingUser = user.run {
+                ray.eldath.offgrid.generated.offgrid.tables.pojos.User(
+                    id,
+                    state,
+                    email,
+                    username,
+                    hashedPassword,
+                    UserRole.MetricsAdmin,
+                    lastLoginTime,
+                    registerTime
+                )
+            }
+
+            val inbound = InboundUser(testingUser, listOf(ExtraPermission(1, User, false)))
 
             expectCatching { inbound.requirePermission(ListUser, DeleteUser, User) }.succeeded().println()
             expectCatching { inbound.requirePermission(Metrics, PanelMetrics) }.succeeded().println()

@@ -6,11 +6,12 @@ import com.fasterxml.jackson.databind.annotation.JsonNaming
 import org.http4k.core.Body
 import org.http4k.format.Jackson.auto
 import java.time.LocalDateTime
+import java.util.*
 
 @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class OutboundEntity(
-    val id: Int,
+    val id: String,
     val name: String,
     val tags: List<String>? = null,
     val createTime: LocalDateTime,
@@ -20,7 +21,7 @@ data class OutboundEntity(
         val lens = Body.auto<OutboundEntity>().toLens()
 
         val mock = OutboundEntity(
-            10231,
+            UUID.randomUUID().toString(),
             "offgrid-test-entity-1",
             listOf("test", "internal"),
             createTime = LocalDateTime.now(),

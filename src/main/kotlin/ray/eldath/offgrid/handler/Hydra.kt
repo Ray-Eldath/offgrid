@@ -131,7 +131,7 @@ object Hydra {
                 val permissions =
                     requestedScopes.mapNotNull { OAuthScope.fromId(it) }.flatMap { it.permissions.toList() }
 
-                val (user, auth, _) = UserRegistrationStatus.fetchByEmail(email).rightOrThrow.rightOrThrow
+                val (user, _) = UserRegistrationStatus.fetchByEmail(email).rightOrThrow.rightOrThrow
                     .requirePermissionOr(permissions.toTypedArray()) {
                         return@run reject(
                             uri = "$HYDRA_HOST/oauth2/auth/requests/consent/reject",
@@ -151,7 +151,7 @@ object Hydra {
                                 "name" to string(user.username),
                                 "email" to string(user.email),
                                 "email_verified" to boolean(true),
-                                "role" to string(if (auth.role == UserRole.Root) "Admin" else "Editor"),
+                                "role" to string(if (user.role == UserRole.Root) "Admin" else "Editor"),
                                 "picture" to string(user.avatarUrl())
                             )
                         )

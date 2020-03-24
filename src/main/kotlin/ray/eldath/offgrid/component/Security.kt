@@ -7,7 +7,6 @@ import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.filter.ServerFilters
 import org.http4k.lens.RequestContextKey
-import ray.eldath.offgrid.generated.offgrid.tables.pojos.Authorization
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.util.ErrorCodes
@@ -23,13 +22,12 @@ import java.util.concurrent.TimeUnit
 
 data class InboundUser(
     val user: User,
-    val authorization: Authorization,
     val extraPermission: Collection<ExtraPermission>
 ) {
     val permissions: Set<Permission> by lazy {
         val r = hashSetOf<Permission>()
 
-        r.addAll(authorization.role.defaultPermissions.expand())
+        r.addAll(user.role.defaultPermissions.expand())
         r.addAll(extraPermission.asSequence().filter { it.isShield == false }.flatMap { it.permissionId.expand() })
         extraPermission.asSequence().filter { it.isShield }.forEach { r.removeAll(it.permissionId.expand()) }
 
@@ -101,9 +99,12 @@ object Argon2 {
     private val argon2 = Argon2Factory.create()
 
     fun hash(password: ByteArray): String =
-        argon2.hash(10, 65536, 1, password).sidecar {
-            argon2.wipeArray(password)
-        }
+        argon2.hash(10, 65536, 1, password)
+            .sidecar {
+                // note that this parameter is encoded into the hash result,
+                // thus may affect data type of the width of the column in database
+                argon2.wipeArray(password)
+            }
 
     fun verify(hashedPassword: String, password: ByteArray): Boolean =
         argon2.verify(hashedPassword, password).sidecar {
