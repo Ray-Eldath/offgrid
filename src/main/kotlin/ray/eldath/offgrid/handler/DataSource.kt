@@ -11,6 +11,7 @@ import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
 import org.http4k.lens.Query
 import org.http4k.lens.int
+import org.http4k.lens.uuid
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.generated.offgrid.Tables
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Entity
@@ -20,6 +21,7 @@ import ray.eldath.offgrid.handler.Entities.findById
 import ray.eldath.offgrid.model.OutboundEntity
 import ray.eldath.offgrid.util.*
 import java.time.LocalDateTime
+import java.util.*
 
 class ListDataSource(credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
@@ -86,7 +88,7 @@ class ListDataSource(credentials: Credentials, private val configuredSecurity: S
 class CreateDataSource(credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    data class CreateDataSourceResponse(val id: Int, val accessKeyId: String, val accessKeySecret: String)
+    data class CreateDataSourceResponse(val id: String, val accessKeyId: String, val accessKeySecret: String)
 
     private val handler: HttpHandler = { req ->
         credentials(req).requirePermission(Permission.CreateDataSource)
@@ -134,13 +136,13 @@ class CreateDataSource(credentials: Credentials, private val configuredSecurity:
 class ModifyDataSource(private val credentials: Credentials, private val configuredSecurity: Security) :
     ContractHandler {
 
-    private fun handler(id: Int): HttpHandler = { req ->
+    private fun handler(id: UUID): HttpHandler = { req ->
         credentials(req).requirePermission(Permission.ModifyDataSource)
 
         val (name) = EntityName.lens(req)
         transaction {
             val e = Tables.ENTITIES
-            val ds = findById(id) ?: throw ErrorCodes.commonNotFound()()
+            val ds = findById(id.toString()) ?: throw ErrorCodes.commonNotFound()()
 
             update(e)
                 .set(e.NAME, name)
@@ -151,7 +153,7 @@ class ModifyDataSource(private val credentials: Credentials, private val configu
     }
 
     override fun compile(): ContractRoute =
-        "/datasource" / Path.int().of("datasourceId", "id of the datasource") meta {
+        "/datasource" / Path.uuid().of("datasourceId", "id of the datasource, represented as UUID") meta {
             summary = "Modify the datasource"
             tags += RouteTag.DataSource
 
@@ -172,7 +174,7 @@ object Entities {
         }
     }
 
-    fun findById(id: Int): Entity? =
+    fun findById(id: String): Entity? =
         transaction {
             val e = Tables.ENTITIES
             selectFrom(e)
