@@ -36,7 +36,7 @@ class ListUsers(credentials: Credentials, private val configuredSecurity: Securi
         val email: String,
         val role: OutboundRole,
         val lastLoginTime: LocalDateTime?,
-        val registerTime: LocalDateTime?
+        val registerTime: LocalDateTime
     )
 
     data class ListResponse(val total: Int, val result: List<ListResponseEntry>)
@@ -100,15 +100,15 @@ class ListUsers(credentials: Credentials, private val configuredSecurity: Securi
                         )
             }
 
-            val prefix = selectDistinct()
+            val prefix = selectDistinct(u.fields().toMutableList())
                 .from(u)
-                .leftJoin(ep).on(ep.USER_ID.eq(u.ID))
+                .leftJoin(ep).onKey()
                 .where(conditions)
 
             ListResponse(
                 total = fetchCount(prefix),
                 result = prefix.orderBy(u.ID).limit(pageSize).offset((page - 1) * pageSize)
-                    .fetch { it.into(u).into(User::class.java) }
+                    .fetchInto(u)
                     .orEmpty()
                     .map {
                         ListResponseEntry(

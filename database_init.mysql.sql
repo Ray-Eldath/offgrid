@@ -78,14 +78,16 @@ create table users
 
 create table extra_permissions
 (
-    user_id       int                  not null
-        primary key,
+    user_id       int                  not null,
     permission_id varchar(5)           not null,
     is_shield     tinyint(1) default 1 not null,
     constraint extra_permissions_users_id_fk
         foreign key (user_id) references users (id)
             on delete cascade
 );
+
+create index extra_permissions_user_id_index
+    on extra_permissions (user_id);
 
 create table reset_password_applications
 (
