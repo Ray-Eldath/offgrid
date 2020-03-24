@@ -6,7 +6,7 @@ plugins {
 }
 
 group = "ray.eldath"
-version = "1.0-SNAPSHOT"
+version = "0.2.0"
 
 val http4kVersion = "3.226.0"
 val micrometerVersion = "1.3.3"
