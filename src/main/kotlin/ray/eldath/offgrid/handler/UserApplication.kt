@@ -36,6 +36,7 @@ class ListUserApplications(credentials: Credentials, private val configuredSecur
         val id: Int,
         val email: String,
         val username: String,
+        val lastRequestTokenTime: LocalDateTime,
         val isApplicationPending: Boolean = true
     )
 
@@ -71,8 +72,16 @@ class ListUserApplications(credentials: Credentials, private val configuredSecur
                 total = selectCount().from(ua).where(conditions).fetchOne(0, Int::class.java),
                 result = selectDistinct(*ua.fields()).from(ua).where(conditions)
                     .orderBy(ua.ID).limit(pageSize).offset((page - 1) * pageSize)
-                    .fetch { it.into(ua).into(UserApplication::class.java) }
-                    .map { ListResponseEntry(it.id, it.email, it.username, it.isApplicationPending) }
+                    .fetchInto(UserApplication::class.java)
+                    .map {
+                        ListResponseEntry(
+                            it.id,
+                            it.email,
+                            it.username,
+                            it.lastRequestTokenTime,
+                            it.isApplicationPending
+                        )
+                    }
             )
         }.let { Response(Status.OK).with(responseLens of it) }
     }
@@ -91,7 +100,7 @@ class ListUserApplications(credentials: Credentials, private val configuredSecur
                 Status.OK,
                 responseLens to ListResponse(
                     1,
-                    listOf(ListResponseEntry(1, "alpha@beta.omega", "False Ray Eldath"))
+                    listOf(ListResponseEntry(1, "alpha@beta.omega", "False Ray Eldath", LocalDateTime.now()))
                 )
             )
         } bindContract Method.GET to handler

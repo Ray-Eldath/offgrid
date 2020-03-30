@@ -12,7 +12,7 @@ import java.time.LocalDateTime
 object Context {
     val wrongPassword = "1234".toByteArray()
     val password = "123".toByteArray()
-    val hashedPassword =
+    const val hashedPassword =
         "\$argon2i\$v=19\$m=65536,t=10,p=1\$sOTA4jpvIiEfrIl6qacjcA\$6BcaWsQNTPCHT1f0kRQeEm3NmT8yAN8UMJJs5oczD70" // 123
 
     val user = User(

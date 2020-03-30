@@ -128,6 +128,8 @@ object Core {
             enableDebug
         loadEnv()
         jooqContext // init after env are loaded
+        BearerSecurity.injectMetrics()
+
         val globalRenderer = OpenApi3(ApiInfo("Offgrid", "v1.0", "Backend API for Offgrid."), Jackson)
         val descPath = "/swagger.json"
 

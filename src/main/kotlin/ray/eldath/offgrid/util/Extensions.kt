@@ -7,7 +7,7 @@ import org.http4k.core.ContentType
 import org.http4k.core.Response
 import java.util.*
 
-fun <T> T.sidecar(aside: (T) -> Unit): T {
+inline fun <T> T.sidecar(aside: (T) -> Unit): T {
     val r = this
     aside(r)
     return r

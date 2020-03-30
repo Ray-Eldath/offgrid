@@ -55,7 +55,7 @@ object BearerSecurity : Security {
         recordStats()
     }.build<String, InboundUser>()
 
-    init {
+    fun injectMetrics() {
         CaffeineCacheMetrics.monitor(Metrics.registry, caffeine, "caffeine.authorization_bearer");
     }
 

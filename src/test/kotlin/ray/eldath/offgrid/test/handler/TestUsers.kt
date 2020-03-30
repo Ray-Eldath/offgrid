@@ -150,6 +150,7 @@ class TestUsers {
         transaction {
             batchDelete(users).execute()
         }
+        TestDatabase.`delete test data`()
     }
 
     private fun Request.auth() = header("Authorization", "Bearer $rootBearer")
