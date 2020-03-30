@@ -7,10 +7,13 @@ import org.http4k.contract.meta
 import org.http4k.contract.security.Security
 import org.http4k.core.*
 import org.http4k.format.Jackson.auto
-import ray.eldath.offgrid.component.*
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
+import ray.eldath.offgrid.component.Argon2
+import ray.eldath.offgrid.component.BearerSecurity
 import ray.eldath.offgrid.component.BearerSecurity.bearerToken
 import ray.eldath.offgrid.component.BearerSecurity.safeBearerToken
+import ray.eldath.offgrid.component.InboundUser
+import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.model.EmailRequest
 import ray.eldath.offgrid.model.OutboundUser
@@ -51,8 +54,7 @@ class Login : ContractHandler {
 
             update(u)
                 .set(u.LAST_LOGIN_TIME, LocalDateTime.now())
-                .where(u.ID.eq(user.id))
-                .execute()
+                .where(u.ID.eq(user.id)).execute()
         }
 
         val bearer = currentBearer ?: BearerSecurity.authorize(inbound)
@@ -103,33 +105,32 @@ class Login : ContractHandler {
         val responseLens = Body.auto<LoginResponse>().toLens()
 
         fun authenticate(email: String, password: ByteArray): InboundUser =
-            runState(UserRegistrationStatus.fetchByEmail(email), password).let {
-                if (it.haveLeft)
-                    throw it.leftOrThrow()
-                else
-                    it.rightOrThrow.rightOrThrow.also { inbound ->
-                        if (inbound.user.state == UserState.Banned)
-                            throw ErrorCodes.USER_HAS_BEEN_BANNED()
+            runState(UserRegistrationStatus.fetchByEmail(email)).let {
+                when (val status = it.second) {
+                    is UserRegistrationStatus.Registered -> {
+                        val (user, _) = status.inbound
+                        if (!Argon2.verify(user.hashedPassword, password))
+                            ErrorCodes.USER_NOT_FOUND
+
+                        status.inbound
                     }
+                    else -> throw it.first!!()
+                }
             }
 
-        fun <L : UserRegistrationStatus, R : ApplicationOrInbound> runState(
-            either: Either<L, R>,
-            plainPassword: ByteArray
-        ): Either<ErrorCode, ApplicationOrInbound> =
-            (if (either.haveLeft)
-                when (either.leftOrThrow) {
-                    UserRegistrationStatus.UNCONFIRMED -> ErrorCodes.UNCONFIRMED_EMAIL
-                    UserRegistrationStatus.APPLICATION_PENDING -> ErrorCodes.APPLICATION_PENDING
-                    UserRegistrationStatus.APPLICATION_REJECTED -> ErrorCodes.APPLICATION_REJECTED
-                    else -> ErrorCodes.USER_NOT_FOUND
+        fun runState(status: UserRegistrationStatus): Pair<ErrorCode?, UserRegistrationStatus> =
+            when (status) {
+                is UserRegistrationStatus.Registered -> {
+                    val (user, _) = status.inbound
+                    if (user.state == UserState.Banned)
+                        ErrorCodes.USER_HAS_BEEN_BANNED
+                    else null
                 }
-            else {
-                val (user, _) = either.rightOrThrow.rightOrThrow
-                if (!Argon2.verify(user.hashedPassword, plainPassword))
-                    ErrorCodes.USER_NOT_FOUND
-                else null
-            }) or either.right
+                UserRegistrationStatus.NotFound -> ErrorCodes.USER_NOT_FOUND
+                is UserRegistrationStatus.Unconfirmed -> ErrorCodes.UNCONFIRMED_EMAIL
+                is UserRegistrationStatus.ApplicationPending -> ErrorCodes.APPLICATION_PENDING
+                is UserRegistrationStatus.ApplicationRejected -> ErrorCodes.APPLICATION_REJECTED
+            } to status
     }
 }
 
