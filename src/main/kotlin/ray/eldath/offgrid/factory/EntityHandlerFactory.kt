@@ -19,12 +19,12 @@ import ray.eldath.offgrid.generated.offgrid.tables.pojos.Entity
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.EntityTag
 import ray.eldath.offgrid.handler.ContractHandler
 import ray.eldath.offgrid.handler.Credentials
-import ray.eldath.offgrid.handler.Entities
 import ray.eldath.offgrid.model.OutboundEntity
 import ray.eldath.offgrid.util.*
 import java.time.LocalDateTime
 import java.util.*
 
+//region ListEntityFactory
 class ListEntityFactory(
     private val factoryCredentials: Credentials,
     private val factorySecurity: Security
@@ -120,7 +120,9 @@ class ListEntityFactory(
         }
     }
 }
+//endregion
 
+// region CreateEntityFactory
 class CreateEntityFactory(
     private val factoryCredentials: Credentials,
     private val factorySecurity: Security
@@ -184,7 +186,9 @@ class CreateEntityFactory(
         }
     }
 }
+// endregion
 
+// region ModifyEntityFactory
 class ModifyEntityFactory(
     private val factoryCredentials: Credentials,
     private val factorySecurity: Security
@@ -238,6 +242,7 @@ class ModifyEntityFactory(
         }
     }
 }
+// endregion
 
 interface EntityHandlerFactory {
     fun makeHandler(
@@ -246,4 +251,25 @@ interface EntityHandlerFactory {
         routeMetaModifier: RouteMetaDsl.() -> Unit,
         vararg requiredPermissions: Permission
     ): ContractHandler
+}
+
+object Entities {
+    data class EntityName(val name: String) {
+        companion object {
+            val lens = Body.auto<EntityName>().toLens()
+
+            val mock = EntityName("offgrid-test-entity-1")
+        }
+    }
+
+    fun findById(id: String): Entity? =
+        transaction {
+            val e = Tables.ENTITIES
+            selectFrom(e)
+                .where(e.ID.eq(id))
+                .fetchOptional {
+                    it.into(e)
+                        .into(Entity::class.java)
+                }.getOrNull()
+        }
 }
