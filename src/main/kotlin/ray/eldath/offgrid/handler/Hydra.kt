@@ -131,21 +131,24 @@ object Hydra {
                 val permissions =
                     requestedScopes.mapNotNull { OAuthScope.fromId(it) }.flatMap { it.permissions.toList() }
 
+                fun reject(error: ErrorCode) =
+                    reject(
+                        uri = "$HYDRA_HOST/oauth2/auth/requests/consent/reject",
+                        challenge = challenge,
+                        exception = error,
+                        queryName = "consent_challenge"
+                    )
+
                 val (user, _) =
                     when (val status = UserRegistrationStatus.fetchByEmail(email)) {
                         is UserRegistrationStatus.Registered -> {
-                            status.inbound.requirePermissionOr(permissions.toTypedArray()) {
-                                return@run reject(
-                                    uri = "$HYDRA_HOST/oauth2/auth/requests/consent/reject",
-                                    challenge = challenge,
-                                    exception = ErrorCodes.permissionDenied(it),
-                                    queryName = "consent_challenge"
-                                )
+                            status.inbound.apply {
+                                requirePermissionOr(permissions.toTypedArray()) {
+                                    return@run reject(ErrorCodes.permissionDenied(it))
+                                }
                             }
-
-                            status.inbound
                         }
-                        else
+                        else -> Login.runState(status).first!!.let { return@run reject(it) }
                     }
 
 
