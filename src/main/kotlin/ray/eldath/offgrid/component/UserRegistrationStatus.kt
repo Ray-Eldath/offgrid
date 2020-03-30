@@ -6,7 +6,7 @@ import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
-import ray.eldath.offgrid.util.*
+import ray.eldath.offgrid.util.transaction
 
 sealed class UserRegistrationStatus {
 
@@ -27,6 +27,7 @@ sealed class UserRegistrationStatus {
                     .from(ua)
                     .where(ua.EMAIL.eq(email))
                     .fetchOptionalInto(UserApplication::class.java)
+
                 if (applicationOptional.isEmpty)
                     NotFound
                 else {

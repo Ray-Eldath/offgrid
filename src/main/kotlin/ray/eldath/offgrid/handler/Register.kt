@@ -14,14 +14,14 @@ import org.http4k.lens.Path
 import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.component.Argon2
 import ray.eldath.offgrid.component.UserRegistrationStatus
-import ray.eldath.offgrid.component.UserRegistrationStatus.*
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
 import ray.eldath.offgrid.model.EmailRequest
 import ray.eldath.offgrid.model.UrlToken
 import ray.eldath.offgrid.model.UsernamePassword
 import ray.eldath.offgrid.util.DirectEmailUtil
-import ray.eldath.offgrid.util.ErrorCodes
+import ray.eldath.offgrid.util.ErrorCodes.APPLICATION_PENDING
+import ray.eldath.offgrid.util.ErrorCodes.APPLICATION_REJECTED
 import ray.eldath.offgrid.util.ErrorCodes.TOKEN_EXPIRED
 import ray.eldath.offgrid.util.ErrorCodes.TOKEN_NOT_FOUND
 import ray.eldath.offgrid.util.ErrorCodes.USER_ALREADY_REGISTERED
@@ -36,41 +36,37 @@ class Register : ContractHandler {
 
     private val handler: HttpHandler = { req: Request ->
         val email = requestLens(req).also { it.check() }.email
-        val either = UserRegistrationStatus.fetchByEmail(email)
-        if (either.notHaveLeft)
-            throw USER_ALREADY_REGISTERED()
-        val status = either.left
-        when (status) {
-            APPLICATION_PENDING -> throw ErrorCodes.APPLICATION_PENDING()
-            APPLICATION_REJECTED -> throw ErrorCodes.APPLICATION_REJECTED()
-            UNCONFIRMED, NOT_FOUND -> Unit // need to handle
-        }
-
         val ua = UserApplications.USER_APPLICATIONS
 
         val urlToken = ConfirmEmail.ConfirmUrlToken.generate(email)
-        if (status == UNCONFIRMED) {
-            either.rightOrThrow.leftOrThrow.let { sendConfirmEmail(urlToken) }
+        when (UserRegistrationStatus.fetchByEmail(email)) {
+            UserRegistrationStatus.NotFound -> {
+                sendConfirmEmail(urlToken)
 
-            transaction {
-                update(ua)
-                    .set(ua.LAST_REQUEST_TOKEN_TIME, LocalDateTime.now())
-                    .set(ua.EMAIL_CONFIRMATION_TOKEN, urlToken.token)
-                    .where(ua.EMAIL.eq(email))
-                    .execute()
-            }
-        } else if (status == NOT_FOUND) {
-            sendConfirmEmail(urlToken)
+                transaction {
 
-            transaction {
-                val record = newRecord(ua).apply {
-                    this.email = email
-                    isEmailConfirmed = false
-                    emailConfirmationToken = urlToken.token
-                    lastRequestTokenTime = LocalDateTime.now()
+                    val record = newRecord(ua).apply {
+                        this.email = email
+                        isEmailConfirmed = false
+                        emailConfirmationToken = urlToken.token
+                        lastRequestTokenTime = LocalDateTime.now()
+                    }
+                    record.store() // TODO: migrate this with next branch? store may check INSERT / UPDATE automatically.
                 }
-                record.store()
             }
+            is UserRegistrationStatus.Unconfirmed -> {
+                sendConfirmEmail(urlToken)
+
+                transaction {
+                    update(ua)
+                        .set(ua.LAST_REQUEST_TOKEN_TIME, LocalDateTime.now())
+                        .set(ua.EMAIL_CONFIRMATION_TOKEN, urlToken.token)
+                        .where(ua.EMAIL.eq(email)).execute()
+                }
+            }
+            is UserRegistrationStatus.ApplicationPending -> throw APPLICATION_PENDING()
+            is UserRegistrationStatus.ApplicationRejected -> throw APPLICATION_REJECTED()
+            is UserRegistrationStatus.Registered -> throw USER_ALREADY_REGISTERED()
         }
 
         Response(OK)
@@ -83,7 +79,7 @@ class Register : ContractHandler {
             tags += RouteTag.Registration
             consumes += ContentType.APPLICATION_JSON
 
-            exception(ErrorCodes.APPLICATION_REJECTED, ErrorCodes.APPLICATION_PENDING)
+            exception(APPLICATION_REJECTED, APPLICATION_PENDING)
             receiving(requestLens to RegisterRequest("alpha.beta@omega.com"))
             returning(OK to "confirm email has been sent, or resent successfully")
         } bindContract Method.POST to handler
@@ -124,23 +120,22 @@ class Register : ContractHandler {
 object ConfirmEmail {
 
     private fun validateUrlToken(urlToken: ConfirmUrlToken): UserApplication {
-        val status = UserRegistrationStatus.fetchByEmail(urlToken.email)
-        if (status.notHaveLeft)
-            throw USER_ALREADY_REGISTERED()
-        when (status.leftOrThrow) {
-            NOT_FOUND -> throw USER_NOT_FOUND()
-            APPLICATION_PENDING -> throw ErrorCodes.APPLICATION_PENDING()
-            APPLICATION_REJECTED -> throw ErrorCodes.APPLICATION_REJECTED()
-            UNCONFIRMED -> Unit
-        }
-        val application = status.rightOrThrow.leftOrThrow
-        val time = application.lastRequestTokenTime
+        when (val status = UserRegistrationStatus.fetchByEmail(urlToken.email)) {
+            is UserRegistrationStatus.Unconfirmed -> {
+                val application = status.application
+                val time = application.lastRequestTokenTime
 
-        if (application.emailConfirmationToken != urlToken.token)
-            throw TOKEN_NOT_FOUND()
-        else if (time.plus(Register.TOKEN_EXPIRY_DURATION).isBefore(LocalDateTime.now()))
-            throw TOKEN_EXPIRED()
-        return application
+                if (application.emailConfirmationToken != urlToken.token)
+                    throw TOKEN_NOT_FOUND()
+                else if (time.plus(Register.TOKEN_EXPIRY_DURATION).isBefore(LocalDateTime.now()))
+                    throw TOKEN_EXPIRED()
+                return application
+            }
+            is UserRegistrationStatus.ApplicationPending -> throw APPLICATION_PENDING()
+            is UserRegistrationStatus.ApplicationRejected -> throw APPLICATION_REJECTED()
+            is UserRegistrationStatus.Registered -> throw USER_ALREADY_REGISTERED()
+            UserRegistrationStatus.NotFound -> throw USER_NOT_FOUND()
+        }
     }
 
     class SubmitUserApplication : ContractHandler {
@@ -159,8 +154,7 @@ object ConfirmEmail {
                     .set(ua.IS_EMAIL_CONFIRMED, true)
                     .set(ua.USERNAME, json.username)
                     .set(ua.HASHED_PASSWORD, Argon2.hash(plainPassword))
-                    .where(ua.EMAIL.eq(application.email))
-                    .execute()
+                    .where(ua.EMAIL.eq(application.email)).execute()
             }
 
             Response(OK)
@@ -203,8 +197,8 @@ object ConfirmEmail {
     private val inboundTokenPath = Path.of("urlToken", "URL token, same as the link sent in confirmation email.")
     private fun RouteMetaDsl.injectExceptions() = exception(
         USER_NOT_FOUND,
-        ErrorCodes.APPLICATION_REJECTED,
-        ErrorCodes.APPLICATION_PENDING,
+        APPLICATION_REJECTED,
+        APPLICATION_PENDING,
         TOKEN_EXPIRED,
         TOKEN_NOT_FOUND
     )

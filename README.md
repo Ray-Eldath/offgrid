@@ -8,7 +8,7 @@ Next-generation FHE-MPC platform.
  - containerization: docker, docker-compose
  - backend: http4k, Kotlin, AdoptOpenJDK
  - database: MySQL
- - metrics database: Graphite
+ - metrics database (RTDB): Graphite
  - static file server: Nginx
  - OAuth middleware: Hydra
  - edge router: traefik
@@ -63,7 +63,6 @@ Note that all URL-staff should omit the tailing slash mark (`/`).
 | `OFFGRID_GRAFANA_HOST`                        | Host of Grafana panel public service. **Should in HTTPS protocol**, otherwise automatically initialization of Hydra will failed. | `https://grafana.offgrid.org`      |
 |`OFFGRID_GRAFANA_OAUTH_CLIENT_ID`|Client of OAuth client for Grafana which will be registered in Hydea. Should be generated with [UUID generator](https://www.uuidgenerator.net/).|`fd74b5fc-1132-458e-80ac-404e01da8bfd`|
 | `OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET` | Secret of OAuth client for Grafana which will be registered in Hydra. | N/A |
-| `OFFGRID_TRAEFIK_HASHED_PASSWORD`             | **Hashed** Password of Traefik panel, **should be generated with the procedure described following.** The panel is protected by basic authorization with user `traefik` and this password. | N/A                                |
 |`OFFGRID_ACME_EMAIL`|Used for obtain HTTPS certificate from Let’s Encrypt with ACME protocol. Default LTS Challenge is used.|`alpha.beta@omega`|
 
 Many environment variables are handled by `docker-compose` automatically since inter-containers connection could established use container name solely, these environment variables are not listed above. So if you deploy Project Offgrid without the pre-defined `docker-compose.yml`, these unset variables may cause problems.
@@ -77,9 +76,6 @@ $ cd offgrid
 
 # now set environment variables...
 $ export ...=...
-
-# subsitute <TRAEFIK_PASSWORD> with the appropriate password you want to protect the traefik panel
-$ export OFFGRID_TRAEFIK_HASHED_PASSWORD=$(echo $(htpasswd -nb traefik <TRAEFIK_PASSWORD>) | sed -e s/\\$/\\$\\$/g)
 
 # set data directory writable
 $ mkdir ~/offgrid
@@ -99,15 +95,15 @@ It may takes 1-2 minutes for all service to spin up as well as the resource usag
 
 Panels and static file server will be exposed to the Internet using edge router with certain entrypoints:
 
-| Entrypoints (`domain.com` as host name) | Service                                             |
-| --------------------------------------- | --------------------------------------------------- |
-| `https://domain.com`                    | `frontend`                                          |
-| `https://api.domain.com/`               | `backend`                                           |
-| `https://domain.com/service/oauth`      | `hydra` (public API only)                           |
-| `https://grafana.domain.com/`           | `grafana`                                           |
-| `https://netdata.domain.com/`           | `netdata` (if deployed)                             |
-| `https://portainer.domain.com/`         | `portainer` (if deployed)                           |
-| `https://traefik.domain.com:8080/`      | `traefik` (panel, protected by basic authorization) |
+| Entrypoints (`domain.com` as host name) | Service                   |
+| --------------------------------------- | ------------------------- |
+| `https://domain.com`                    | `frontend`                |
+| `https://api.domain.com/`               | `backend`                 |
+| `https://domain.com/service/oauth`      | `hydra` (public API only) |
+| `https://grafana.domain.com/`           | `grafana`                 |
+| `https://netdata.domain.com/`           | `netdata` (if deployed)   |
+| `https://portainer.domain.com/`         | `portainer` (if deployed) |
+| `https://traefik.domain.com/`           | `traefik` (panel)         |
 
 Services not listed above indicates them are not exposed to the Internet. 
 
