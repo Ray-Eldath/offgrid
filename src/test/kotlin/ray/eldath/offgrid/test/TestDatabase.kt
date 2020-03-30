@@ -91,8 +91,7 @@ object TestDatabase {
     fun `delete test data`() {
         transaction {
             delete(USERS)
-                .where(USERS.USERNAME.eq("offgrid test"))
-                .execute()
+                .where(USERS.USERNAME.eq("offgrid test")).execute()
         }
         println("delete test data successfully")
     }

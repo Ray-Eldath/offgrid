@@ -14,6 +14,7 @@ import org.http4k.lens.Query
 import org.http4k.lens.int
 import org.http4k.lens.string
 import org.jooq.Condition
+import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.component.UserRegistrationStatus.Companion.fetchByEmail
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.Users
@@ -243,8 +244,7 @@ class BanUser(private val credentials: Credentials, private val configuredSecuri
 
             update(u)
                 .set(u.STATE, UserState.Banned)
-                .where(u.ID.eq(user.id))
-                .execute()
+                .where(u.ID.eq(user.id)).execute()
         }
 
         Response(Status.OK)
@@ -272,8 +272,7 @@ class UnbanUser(private val credentials: Credentials, private val configuredSecu
 
                 update(u)
                     .set(u.STATE, UserState.Normal)
-                    .where(u.ID.eq(user.id))
-                    .execute()
+                    .where(u.ID.eq(user.id)).execute()
             }
 
         Response(Status.OK)
@@ -298,16 +297,18 @@ class DeleteUser(private val credentials: Credentials, private val configuredSec
         val self = credentials(req)
         self.requirePermission(Permission.DeleteUser)
 
-        val notFound = commonNotFound()()
         val userEmail = checkUserId(userId).email
 
         if (userEmail == self.user.email)
             throw ErrorCodes.DELETE_SELF()
-        if (fetchByEmail(userEmail)
-                .rightOrThrow { notFound }.rightOrThrow { notFound }.permissions.expand()
-                .any { !self.permissions.contains(it) }
-        )
-            throw ErrorCodes.DELETE_SURPASS_USER()
+
+        when (val status = fetchByEmail(userEmail)) {
+            is UserRegistrationStatus.Registered -> {
+                if (status.inbound.permissions.expand().any { !self.permissions.contains(it) })
+                    throw ErrorCodes.DELETE_SURPASS_USER()
+            }
+            else -> throw commonNotFound()()
+        }
 
         deleteUser(userId)
 

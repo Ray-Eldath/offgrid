@@ -7,47 +7,43 @@ import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
 import ray.eldath.offgrid.util.*
-import java.util.*
 
-typealias ApplicationOrInbound = Either<UserApplication, InboundUser>
+sealed class UserRegistrationStatus {
 
-enum class UserRegistrationStatus(val code: Int) {
-    NOT_FOUND(2),
-    UNCONFIRMED(3),
-    APPLICATION_PENDING(10),
-    APPLICATION_REJECTED(11);
+    data class Registered(val inbound: InboundUser) : UserRegistrationStatus()
+    object NotFound : UserRegistrationStatus()
+    data class Unconfirmed(val application: UserApplication) : UserRegistrationStatus()
+    data class ApplicationPending(val application: UserApplication) : UserRegistrationStatus()
+    data class ApplicationRejected(val application: UserApplication) : UserRegistrationStatus()
 
     companion object {
-        fun fetchByEmail(email: String): Either<UserRegistrationStatus, ApplicationOrInbound> {
+        fun fetchByEmail(email: String): UserRegistrationStatus {
             val inbound = fetchInboundUser(email)
-            if (inbound.isPresent)
-                return null or inbound.toRight()
+            if (inbound != null)
+                return Registered(inbound)
             return transaction {
                 val ua = UserApplications.USER_APPLICATIONS
                 val applicationOptional = select()
                     .from(ua)
                     .where(ua.EMAIL.eq(email))
-                    .fetchOptional { it.into(ua).into(UserApplication::class.java) }
+                    .fetchOptionalInto(UserApplication::class.java)
                 if (applicationOptional.isEmpty)
-                    NOT_FOUND.toLeft()
+                    NotFound
                 else {
                     val application = applicationOptional.get()
 
-                    val status =
-                        if (application.isEmailConfirmed == false)
-                            UNCONFIRMED
-                        else {
-                            if (application.isApplicationPending)
-                                APPLICATION_PENDING
-                            else APPLICATION_REJECTED
-                        }
-
-                    (status to (application.toLeft())).toEither()
+                    if (application.isEmailConfirmed == false)
+                        Unconfirmed(application)
+                    else {
+                        if (application.isApplicationPending)
+                            ApplicationPending(application)
+                        else ApplicationRejected(application)
+                    }
                 }
             }
         }
 
-        private fun fetchInboundUser(email: String): Optional<InboundUser> =
+        private fun fetchInboundUser(email: String): InboundUser? =
             transaction {
                 val u = Users.USERS
                 val e = ExtraPermissions.EXTRA_PERMISSIONS
@@ -55,18 +51,18 @@ enum class UserRegistrationStatus(val code: Int) {
                 val optionalUser = select()
                     .from(u)
                     .where(u.EMAIL.eq(email))
-                    .fetchOptional { it.into(u).into(User::class.java) }
+                    .fetchOptionalInto(User::class.java)
                 if (optionalUser.isEmpty)
-                    Optional.empty()
+                    null
                 else {
                     val user = optionalUser.get()
 
                     val list = select()
                         .from(e)
                         .innerJoin(u).on(e.USER_ID.eq(u.ID))
-                        .fetch { it.into(e).into(ExtraPermission::class.java) }
+                        .fetchInto(ExtraPermission::class.java)
 
-                    Optional.of(InboundUser(user, list))
+                    InboundUser(user, list)
                 }
             }
     }

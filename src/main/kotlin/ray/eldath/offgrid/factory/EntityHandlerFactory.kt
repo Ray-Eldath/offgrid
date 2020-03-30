@@ -267,9 +267,6 @@ object Entities {
             val e = Tables.ENTITIES
             selectFrom(e)
                 .where(e.ID.eq(id))
-                .fetchOptional {
-                    it.into(e)
-                        .into(Entity::class.java)
-                }.getOrNull()
+                .fetchOptional { it.into(e).into(Entity::class.java) }.getOrNull()
         }
 }

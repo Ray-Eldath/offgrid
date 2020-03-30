@@ -20,10 +20,7 @@ import java.security.MessageDigest
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-data class InboundUser(
-    val user: User,
-    val extraPermission: Collection<ExtraPermission>
-) {
+data class InboundUser(val user: User, val extraPermission: Collection<ExtraPermission>) {
     val permissions: Set<Permission> by lazy {
         val r = hashSetOf<Permission>()
 
