@@ -19,8 +19,9 @@ import java.util.*
 class TestUser {
     @Nested
     inner class TestLogin {
+        private val login = Login().compile()
         private fun login(email: String, password: String) =
-            Login().compile().invoke("/login".POST().with(Login.requestLens of Login.LoginRequest(email, password)))
+            login("/login".POST().with(Login.requestLens of Login.LoginRequest(email, password)))
 
         @Test
         fun `malformed email address`() {
@@ -30,7 +31,7 @@ class TestUser {
 
         @Test
         fun `wrong user email address`() {
-            expectCatching { login("test@offgrid.org", "123") }.failed()
+            expectCatching { login("test@offgrqweqweqweqweid.org", "123") }.failed()
                 .isEqualTo(ErrorCodes.USER_NOT_FOUND()).println()
         }
 

@@ -25,8 +25,9 @@ data class InboundUser(val user: User, val extraPermission: Collection<ExtraPerm
         val r = hashSetOf<Permission>()
 
         r.addAll(user.role.defaultPermissions.expand())
-        r.addAll(extraPermission.asSequence().filter { it.isShield == false }.flatMap { it.permissionId.expand() })
         extraPermission.asSequence().filter { it.isShield }.forEach { r.removeAll(it.permissionId.expand()) }
+        r.addAll(extraPermission.asSequence().filter { it.isShield == false }.flatMap { it.permissionId.expand() })
+        // ban first, and then unban.
 
         r
     }
@@ -34,8 +35,8 @@ data class InboundUser(val user: User, val extraPermission: Collection<ExtraPerm
     fun requirePermission(vararg requires: Permission) =
         requirePermissionOr(requires) { throw ErrorCodes.permissionDenied(it)() }
 
-    inline fun requirePermissionOr(requires: Array<out Permission>, otherwise: (List<Permission>) -> Unit) =
-        also {
+    inline fun requirePermissionOr(requires: Array<out Permission>, otherwise: (List<Permission>) -> Unit): Unit =
+        run {
             requires.expand().filterNot { permissions.contains(it) }
                 .takeIf { it.isNotEmpty() }?.let(otherwise)
         }
@@ -96,12 +97,11 @@ object Argon2 {
     private val argon2 = Argon2Factory.create()
 
     fun hash(password: ByteArray): String =
-        argon2.hash(10, 65536, 1, password)
-            .sidecar {
-                // note that this parameter is encoded into the hash result,
-                // thus may affect data type of the width of the column in database
-                argon2.wipeArray(password)
-            }
+        argon2.hash(10, 65536, 1, password).sidecar {
+            // note that this parameter is encoded into the hash result,
+            // thus may affect data type of the width of the column in database
+            argon2.wipeArray(password)
+        }
 
     fun verify(hashedPassword: String, password: ByteArray): Boolean =
         argon2.verify(hashedPassword, password).sidecar {

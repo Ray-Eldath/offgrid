@@ -15,8 +15,6 @@ import ray.eldath.offgrid.util.ErrorCodes.APPLICATION_PENDING
 import ray.eldath.offgrid.util.ErrorCodes.APPLICATION_REJECTED
 import ray.eldath.offgrid.util.ErrorCodes.UNCONFIRMED_EMAIL
 import ray.eldath.offgrid.util.ErrorCodes.USER_NOT_FOUND
-import ray.eldath.offgrid.util.ErrorCodes.permissionDenied
-import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.Permission.*
 import ray.eldath.offgrid.util.Permission.Companion.expand
 import ray.eldath.offgrid.util.UserRole
@@ -77,8 +75,8 @@ class TestDataClass {
             expectCatching { inbound.requirePermission(User, DeleteUser) }.failed()
                 .isEqualTo(permissionDeniedException(User, DeleteUser)).println()
 
-            expectCatching { inbound.requirePermission(Permission.ComputationResult) }.failed()
-                .isEqualTo(permissionDeniedException(Permission.ComputationResult)).println()
+            expectCatching { inbound.requirePermission(ComputationResult) }.failed()
+                .isEqualTo(permissionDeniedException(ComputationResult)).println()
         }
 
         @Test
@@ -101,9 +99,6 @@ class TestDataClass {
             expectCatching { inbound.requirePermission(ListUser, DeleteUser, User) }.succeeded().println()
             expectCatching { inbound.requirePermission(Metrics, PanelMetrics) }.succeeded().println()
         }
-
-        private fun permissionDeniedException(vararg require: Permission) =
-            permissionDenied(require.expand().toList())()
     }
 
     @Nested

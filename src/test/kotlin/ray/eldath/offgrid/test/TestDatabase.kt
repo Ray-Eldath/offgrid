@@ -2,18 +2,15 @@ package ray.eldath.offgrid.test
 
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.TestInstance.Lifecycle
-import ray.eldath.offgrid.component.InboundUser
 import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.core.Core.enableDebug
 import ray.eldath.offgrid.core.Core.jooqContext
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions.EXTRA_PERMISSIONS
 import ray.eldath.offgrid.generated.offgrid.tables.Users.USERS
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
-import ray.eldath.offgrid.util.ErrorCodes
-import ray.eldath.offgrid.util.Permission
+import ray.eldath.offgrid.util.Permission.*
 import ray.eldath.offgrid.util.UserRole
 import ray.eldath.offgrid.util.transaction
-import strikt.api.DescribeableBuilder
 import strikt.api.expect
 import strikt.api.expectThat
 import strikt.assertions.*
@@ -47,13 +44,13 @@ object TestDatabase {
 
             val extra1 = newRecord(EXTRA_PERMISSIONS).apply {
                 userId = executed
-                permissionId = Permission.ComputationResult
+                permissionId = ComputationResult
                 isShield = true
             }
 
             val extra2 = newRecord(EXTRA_PERMISSIONS).apply {
                 userId = executed
-                permissionId = Permission.SelfComputationResult
+                permissionId = SelfComputationResult
                 isShield = false
             }
 
@@ -68,8 +65,7 @@ object TestDatabase {
         val status = UserRegistrationStatus.fetchByEmail("test@offgrid.ray-eldath.me")
 
         expect {
-            val i: DescribeableBuilder<InboundUser> =
-                that(status).isA<UserRegistrationStatus.Registered>().get { inbound }
+            that(status).isA<UserRegistrationStatus.Registered>().get { inbound }
 
             val inbound = (status as UserRegistrationStatus.Registered).inbound
             that(inbound) {
@@ -79,13 +75,13 @@ object TestDatabase {
                 that(user.email).isEqualTo("test@offgrid.ray-eldath.me")
                 that(user.role).isEqualTo(UserRole.Root)
                 that(permissions).containsExactlyInAnyOrder(
-                    ExtraPermission(userId, Permission.ComputationResult, true),
-                    ExtraPermission(userId, Permission.SelfComputationResult, false)
+                    ExtraPermission(userId, ComputationResult, true),
+                    ExtraPermission(userId, SelfComputationResult, false)
                 )
 
-                catching { inbound.requirePermission(Permission.ComputationResult) }.succeeded()
-                catching { inbound.requirePermission(Permission.SelfComputationResult) }.failed()
-                    .isEqualTo(ErrorCodes.permissionDenied(Permission.SelfComputationResult)())
+                catching { inbound.requirePermission(ModifyUser) }.succeeded()
+                catching { inbound.requirePermission(SelfComputationResult) }.succeeded()
+                catching { inbound.requirePermission(ComputationResult) }.failed().println()
             }
         }
     }

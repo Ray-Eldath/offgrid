@@ -6,6 +6,9 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.http4k.core.Method
 import org.http4k.core.Response
 import org.http4k.core.Status
+import ray.eldath.offgrid.util.ErrorCodes
+import ray.eldath.offgrid.util.Permission
+import ray.eldath.offgrid.util.Permission.Companion.expand
 import strikt.api.Assertion
 
 fun String.GET() = org.http4k.core.Request(Method.GET, this)
@@ -20,3 +23,6 @@ fun <T> Assertion.Builder<T>.println(): Assertion.Builder<T> = get {
     println(this)
     this
 }
+
+fun permissionDeniedException(vararg require: Permission) =
+    (ErrorCodes.permissionDenied(require.expand().toList()))()

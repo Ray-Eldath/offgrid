@@ -31,8 +31,7 @@ class Login : ContractHandler {
     private val expireIn = (BearerSecurity.EXPIRY_MINUTES * 60).toLong()
 
     private val handler: HttpHandler = { req: Request ->
-        val json = requestLens(req)
-        json.check()
+        val json = requestLens(req).also { it.check() }
         val email = json.email
         val plainPassword = json.password.toByteArray()
 
@@ -40,7 +39,7 @@ class Login : ContractHandler {
         val current = currentBearer?.let { BearerSecurity.query(it) }
 
         val inbound: InboundUser =
-            if (current == null) { // can not find corresponding user in registry
+            if (current == null) { // cannot find corresponding user in registry
                 if (currentBearer != null) // but the bearer is set, indicates that the bearer is invalid
                     throw ErrorCodes.AUTH_TOKEN_INVALID_OR_EXPIRED()
 
@@ -117,11 +116,11 @@ class Login : ContractHandler {
                 when (val run = it.second) {
                     is UserRegistrationStatus.Registered -> {
                         if (!Argon2.verify(run.inbound.user.hashedPassword, password))
-                            ErrorCodes.USER_NOT_FOUND
-                        else null
+                            ErrorCodes.USER_NOT_FOUND to UserRegistrationStatus.NotFound
+                        else it
                     }
-                    else -> it.first
-                } to it.second
+                    else -> it
+                }
             }
 
         fun runState(status: UserRegistrationStatus): Pair<ErrorCode?, UserRegistrationStatus> =
@@ -132,7 +131,7 @@ class Login : ContractHandler {
                         ErrorCodes.USER_HAS_BEEN_BANNED
                     else null
                 }
-                UserRegistrationStatus.NotFound -> ErrorCodes.USER_NOT_FOUND
+                is UserRegistrationStatus.NotFound -> ErrorCodes.USER_NOT_FOUND
                 is UserRegistrationStatus.Unconfirmed -> ErrorCodes.UNCONFIRMED_EMAIL
                 is UserRegistrationStatus.ApplicationPending -> ErrorCodes.APPLICATION_PENDING
                 is UserRegistrationStatus.ApplicationRejected -> ErrorCodes.APPLICATION_REJECTED

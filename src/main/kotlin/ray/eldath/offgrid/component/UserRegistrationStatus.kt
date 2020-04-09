@@ -7,6 +7,7 @@ import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.UserApplication
 import ray.eldath.offgrid.util.transaction
+import ray.eldath.offgrid.util.unsafeTransaction
 
 sealed class UserRegistrationStatus {
 
@@ -45,7 +46,7 @@ sealed class UserRegistrationStatus {
         }
 
         private fun fetchInboundUser(email: String): InboundUser? =
-            transaction {
+            unsafeTransaction {
                 val u = Users.USERS
                 val e = ExtraPermissions.EXTRA_PERMISSIONS
 
@@ -61,7 +62,7 @@ sealed class UserRegistrationStatus {
                     val list = select()
                         .from(e)
                         .innerJoin(u).on(e.USER_ID.eq(u.ID))
-                        .fetchInto(ExtraPermission::class.java)
+                        .fetch { it.into(e).into(ExtraPermission::class.java) }
 
                     InboundUser(user, list)
                 }
