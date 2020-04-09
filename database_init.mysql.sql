@@ -107,9 +107,6 @@ alter table users
 alter table user_applications
     auto_increment = 1000;
 
-alter table entities
-    auto_increment = 1000;
-
 alter table entity_routes
     auto_increment = 1000;
 

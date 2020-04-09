@@ -1,6 +1,5 @@
 package ray.eldath.offgrid.util
 
-import java.lang.Exception
 import java.util.*
 
 sealed class Either<out A, out B> {
@@ -8,10 +7,6 @@ sealed class Either<out A, out B> {
     class Right<B>(val value: B) : Either<Nothing, B>()
 
     inline fun <C> map(f: (B) -> C): Either<A, C> = flatMap { Right(f(it)) }
-
-    inline fun rightOrThrow(exception: () -> Exception) =
-        when (this) {
-        }
 }
 
 inline fun <A, B, C> Either<A, B>.flatMap(f: (B) -> Either<A, C>): Either<A, C> =

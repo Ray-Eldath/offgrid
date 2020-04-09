@@ -2,21 +2,21 @@ package ray.eldath.offgrid.test
 
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.TestInstance.Lifecycle
+import ray.eldath.offgrid.component.InboundUser
 import ray.eldath.offgrid.component.UserRegistrationStatus
 import ray.eldath.offgrid.core.Core.enableDebug
 import ray.eldath.offgrid.core.Core.jooqContext
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions.EXTRA_PERMISSIONS
 import ray.eldath.offgrid.generated.offgrid.tables.Users.USERS
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
+import ray.eldath.offgrid.util.ErrorCodes
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
 import ray.eldath.offgrid.util.transaction
+import strikt.api.DescribeableBuilder
 import strikt.api.expect
 import strikt.api.expectThat
-import strikt.assertions.contains
-import strikt.assertions.isEqualTo
-import strikt.assertions.isNotNull
-import strikt.assertions.isNull
+import strikt.assertions.*
 import java.time.LocalDateTime
 
 @TestInstance(Lifecycle.PER_CLASS)
@@ -65,24 +65,27 @@ object TestDatabase {
 
     @Test
     fun `select User join Authorization and ExtraPermission`() {
-        val (topLeft, topRight) = UserRegistrationStatus.fetchByEmail("test@offgrid.ray-eldath.me")
+        val status = UserRegistrationStatus.fetchByEmail("test@offgrid.ray-eldath.me")
 
         expect {
-            expectThat(topLeft).isNull()
-            expectThat(topRight).isNotNull()
-            expectThat(topRight!!) {
-                expectThat(topRight.left).isNull()
-                expectThat(topRight.right).isNotNull()
+            val i: DescribeableBuilder<InboundUser> =
+                that(status).isA<UserRegistrationStatus.Registered>().get { inbound }
 
-                val (user, list) = topRight.rightOrThrow
+            val inbound = (status as UserRegistrationStatus.Registered).inbound
+            that(inbound) {
+                val (user, permissions) = inbound
                 val userId = user.id
 
                 that(user.email).isEqualTo("test@offgrid.ray-eldath.me")
                 that(user.role).isEqualTo(UserRole.Root)
-                that(list).contains(
+                that(permissions).containsExactlyInAnyOrder(
                     ExtraPermission(userId, Permission.ComputationResult, true),
                     ExtraPermission(userId, Permission.SelfComputationResult, false)
                 )
+
+                catching { inbound.requirePermission(Permission.ComputationResult) }.succeeded()
+                catching { inbound.requirePermission(Permission.SelfComputationResult) }.failed()
+                    .isEqualTo(ErrorCodes.permissionDenied(Permission.SelfComputationResult)())
             }
         }
     }

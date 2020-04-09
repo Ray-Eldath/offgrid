@@ -105,17 +105,23 @@ class Login : ContractHandler {
         val responseLens = Body.auto<LoginResponse>().toLens()
 
         fun authenticate(email: String, password: ByteArray): InboundUser =
-            runState(UserRegistrationStatus.fetchByEmail(email)).let {
+            runState(UserRegistrationStatus.fetchByEmail(email), password).let {
                 when (val status = it.second) {
-                    is UserRegistrationStatus.Registered -> {
-                        val (user, _) = status.inbound
-                        if (!Argon2.verify(user.hashedPassword, password))
-                            ErrorCodes.USER_NOT_FOUND
-
-                        status.inbound
-                    }
+                    is UserRegistrationStatus.Registered -> status.inbound
                     else -> throw it.first!!()
                 }
+            }
+
+        fun runState(status: UserRegistrationStatus, password: ByteArray): Pair<ErrorCode?, UserRegistrationStatus> =
+            runState(status).let {
+                when (val run = it.second) {
+                    is UserRegistrationStatus.Registered -> {
+                        if (!Argon2.verify(run.inbound.user.hashedPassword, password))
+                            ErrorCodes.USER_NOT_FOUND
+                        else null
+                    }
+                    else -> it.first
+                } to it.second
             }
 
         fun runState(status: UserRegistrationStatus): Pair<ErrorCode?, UserRegistrationStatus> =

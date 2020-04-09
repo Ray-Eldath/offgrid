@@ -28,6 +28,7 @@ object ErrorCodes {
 
 
     // 3: invalid state or data
+    fun permissionDenied(vararg require: Permission) = permissionDenied(require.toList())
     fun permissionDenied(require: Collection<Permission>) = ErrorCode(
         301,
         "permission denied: require ${require.joinToString(limit = 30) { it.name }}",
