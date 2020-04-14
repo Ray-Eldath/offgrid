@@ -148,7 +148,7 @@ object Core {
     }
 
     private const val ENV_PREFIX = "offgrid.env"
-    fun loadEnv() {
+    private fun loadEnv() {
         val file = File(System.getProperty("user.dir") + "/.env.app")
         if (!file.exists())
             return
@@ -167,7 +167,7 @@ object Core {
     fun getEnv(key: String): String? {
         if (System.getProperty("$ENV_PREFIX.loaded") == null)
             loadEnv()
-        return (System.getenv(key) ?: System.getProperty("offgrid.env.$key")).ifBlank { null }
+        return (System.getenv(key) ?: System.getProperty("$ENV_PREFIX.$key"))?.ifBlank { null }
     }
 
     fun getEnvSafe(key: String): String =

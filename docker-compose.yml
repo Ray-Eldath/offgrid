@@ -176,8 +176,7 @@ services:
     labels:
       - "traefik.http.routers.backend.rule=Host(`api.${OFFGRID_DOMAIN}`)"
       - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=OPTIONS,GET,POST,PUT,PATCH,DELETE"
-      - "traefik.http.middlewares.cors.headers.accesscontrolallowheaders=Authorization,Content-Type"
-      - "traefik.http.middlewares.cors.headers.accesscontrolalloworigin=origin-list-or-null"
+      - "traefik.http.middlewares.cors.headers.accesscontrolalloworiginlist=${OFFGRID_HOST}"
       - "traefik.http.middlewares.cors.headers.accesscontrolmaxage=100"
       - "traefik.http.middlewares.cors.headers.addvaryheader=true"
       - "traefik.http.routers.backend.middlewares=cors,compress"
