@@ -105,9 +105,12 @@ class Login : ContractHandler {
 
         fun authenticate(email: String, password: ByteArray): InboundUser =
             runState(UserRegistrationStatus.fetchByEmail(email), password).let {
+                val error = it.first
+                if (error != null)
+                    throw error()
                 when (val status = it.second) {
                     is UserRegistrationStatus.Registered -> status.inbound
-                    else -> throw it.first!!()
+                    else -> throw IllegalArgumentException("any not-Registered status should accompanied with an ErrorCode")
                 }
             }
 

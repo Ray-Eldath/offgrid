@@ -12,7 +12,7 @@ import java.time.LocalDateTime
 
 data class UsernamePassword(val username: String, val password: String) {
     companion object {
-        private const val MAX_USERNAME_LENGTH = 16
+        private const val MAX_USERNAME_LENGTH = 30
         private const val MAX_PASSWORD_LENGTH = 18
         private const val MIN_PASSWORD_LENGTH = 6
 

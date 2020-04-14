@@ -55,7 +55,7 @@ create table user_applications
     email_confirmation_token char(36)             not null,
     last_request_token_time  datetime             not null,
     hashed_password          char(97)             null,
-    username                 varchar(20)          null,
+    username                 varchar(30)          null,
     is_application_pending   tinyint(1) default 1 not null,
     constraint User_Applications_email_uindex
         unique (email)
@@ -67,7 +67,7 @@ create table users
         primary key,
     state           int default 0 not null,
     email           varchar(50)   not null,
-    username        varchar(20)   not null,
+    username        varchar(30)   not null,
     hashed_password char(97)      not null,
     role            int           not null,
     last_login_time datetime      null,

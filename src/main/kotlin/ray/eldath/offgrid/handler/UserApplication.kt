@@ -14,7 +14,6 @@ import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
 import org.http4k.lens.Query
 import org.http4k.lens.int
-import org.jooq.Condition
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.UserApplications
 import ray.eldath.offgrid.generated.offgrid.tables.Users
@@ -61,7 +60,7 @@ class ListUserApplications(credentials: Credentials, private val configuredSecur
         transaction {
             val ua = UserApplications.USER_APPLICATIONS
 
-            val conditions = arrayListOf<Condition>().also {
+            val conditions = arrayListOf(ua.IS_EMAIL_CONFIRMED.isTrue).also {
                 if (email != null)
                     it += ua.EMAIL.likeIgnoreCase("%$email%")
                 if (username != null)
