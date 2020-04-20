@@ -6,11 +6,14 @@ import com.aliyuncs.exceptions.ClientException
 import com.aliyuncs.exceptions.ServerException
 import com.aliyuncs.http.MethodType
 import com.aliyuncs.profile.DefaultProfile
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.slf4j.LoggerFactory
 import ray.eldath.offgrid.core.Core
 
 object DirectEmailUtil {
+    private val ctx = CoroutineScope(Dispatchers.IO)
     private val logger = LoggerFactory.getLogger(javaClass)
     private val REGION = Core.getEnv("OFFGRID_ALIYUN_DIRECTMAIL_REGION") ?: "cn-hangzhou"
 
@@ -24,16 +27,16 @@ object DirectEmailUtil {
                 DefaultProfile.addEndpoint(REGION, "Dm", "dm.$REGION.aliyuncs.com")
         }.let { DefaultAcsClient(it) }
 
-    suspend fun sendEmail(
+    fun sendEmail(
         subject: String,
         aliyunTag: String,
         toAddress: String,
         fromAlias: String = "Offgrid System",
         textBody: () -> String
-    ) = coroutineScope {
+    ) = ctx.launch {
         if (Core.debug) {
             TestSuite.debug("email tagged $aliyunTag with subject $subject attempt send to $toAddress:\n${textBody()}")
-            return@coroutineScope
+            return@launch
         }
 
         fun error(e: ClientException, type: String = "ClientException"): Unit =

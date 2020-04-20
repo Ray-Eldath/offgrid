@@ -44,13 +44,13 @@ class TestDataClass {
 
         @Test
         fun `test ModelRegistry expand`() {
-            expectThat(Consumer.expand().toList())
+            expectThat(Endpoint.expand().toList())
                 .containsExactlyInAnyOrder(
-                    Consumer,
-                    ListConsumer,
-                    CreateConsumer,
-                    ModifyConsumer,
-                    DeleteConsumer
+                    Endpoint,
+                    ListEndpoint,
+                    CreateEndpoint,
+                    ModifyEndpoint,
+                    DeleteEndpoint
                 )
         }
     }

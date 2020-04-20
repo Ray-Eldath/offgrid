@@ -258,7 +258,7 @@ class RejectUserApplication(private val credentials: Credentials, private val co
                         .set(ua.IS_APPLICATION_PENDING, false)
                         .where(ua.ID.eq(it.id)).execute()
                 }
-        }.let { ctx.launch { sendRejectEmail(it.email, it.username, LocalDateTime.now()) } }
+        }.let { sendRejectEmail(it.email, it.username, LocalDateTime.now()) }
 
         Response(Status.OK)
     }
@@ -278,7 +278,7 @@ class RejectUserApplication(private val credentials: Credentials, private val co
     companion object {
         private val ctx = CoroutineScope(Dispatchers.IO)
 
-        suspend fun sendRejectEmail(email: String, username: String, time: LocalDateTime) {
+        fun sendRejectEmail(email: String, username: String, time: LocalDateTime) = ctx.launch {
             sendEmail("[Offgrid] 注册失败：您的申请已被拒绝", "applicationrejected", email) {
                 """
                     尊敬的 $username：

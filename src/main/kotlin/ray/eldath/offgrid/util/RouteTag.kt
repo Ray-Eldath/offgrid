@@ -16,5 +16,13 @@ object RouteTag {
     val Meta = Tag("Meta", "Metadata of the system, like all available user roles, permissions, etc.")
     val Debug = Tag("Debug", "Only for debug purpose, so only enabled in debug mode.")
 
-    val DataSource = Tag("DataSource", "Admin: list, create, modify, delete data source(s).")
+    val DataSource = Tag(
+        "DataSource", "Admin: list, create, modify, delete data source(s). \n" +
+                "DataSource is the origin of fresh encrypted messages for Endpoint to compute."
+    )
+    val Endpoint = Tag(
+        "Endpoint", "Admin: list, create, modify, delete endpoint(s). \n" +
+                "Endpoint is where actual computation of fresh encrypted messages is done, " +
+                "the DataSource-Endpoint connection is confined by Route."
+    )
 }

@@ -50,10 +50,8 @@ class ListEntityFactory(
         private val handler: HttpHandler = { req ->
             credentials(req).requirePermission(*requiredPermissions)
 
-            val pageSize =
-                pageSizeLens(req)
-            val page =
-                pageLens(req)
+            val pageSize = pageSizeLens(req)
+            val page = pageLens(req)
 
             val fetched: Pair<Int, MutableList<Entity>> =
                 transaction { // type inference staff: has to specify explicitly
@@ -85,12 +83,7 @@ class ListEntityFactory(
                 )
             }
 
-            Response(Status.OK).with(
-                responseLens of ListResponse(
-                    fetched.first,
-                    mapped
-                )
-            )
+            Response(Status.OK).with(responseLens of ListResponse(fetched.first, mapped))
         }
 
         override fun compile(): ContractRoute =

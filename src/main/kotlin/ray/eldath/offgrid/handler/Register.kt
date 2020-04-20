@@ -1,8 +1,5 @@
 package ray.eldath.offgrid.handler
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.http4k.contract.ContractRoute
 import org.http4k.contract.RouteMetaDsl
 import org.http4k.contract.div
@@ -85,12 +82,11 @@ class Register : ContractHandler {
         } bindContract Method.POST to handler
 
     companion object {
-        private val ctx = CoroutineScope(Dispatchers.IO)
         val requestLens = Body.auto<RegisterRequest>().toLens()
 
         val TOKEN_EXPIRY_DURATION: Duration = Duration.ofHours(2)
 
-        fun sendConfirmEmail(token: ConfirmEmail.ConfirmUrlToken) = ctx.launch {
+        fun sendConfirmEmail(token: ConfirmEmail.ConfirmUrlToken) = with {
             DirectEmailUtil.sendEmail("[Offgrid] 注册确认：验证您的邮箱", "emailconfirm", token.email) {
                 """
                     您好，

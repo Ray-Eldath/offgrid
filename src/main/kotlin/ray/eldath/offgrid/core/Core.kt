@@ -70,6 +70,10 @@ object Core {
         allRoutes += CreateDataSource(credentials, security)
         allRoutes += ModifyDataSource(credentials, security)
 
+        allRoutes += ListEndpoint(credentials, security)
+        allRoutes += CreateEndpoint(credentials, security)
+        allRoutes += ModifyEndpoint(credentials, security)
+
         allRoutes += Self(credentials, security)
         allRoutes += DeleteSelf(credentials, security)
 

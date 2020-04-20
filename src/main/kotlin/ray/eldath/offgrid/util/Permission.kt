@@ -28,11 +28,11 @@ enum class Permission(
         DeleteDataSource
     ),
 
-    ListConsumer("C_L"),
-    CreateConsumer("C_C"),
-    ModifyConsumer("C_M"),
-    DeleteConsumer("C_D"),
-    Consumer("C", ListConsumer, CreateConsumer, ModifyConsumer, DeleteConsumer),
+    ListEndpoint("E_L"),
+    CreateEndpoint("E_C"),
+    ModifyEndpoint("E_M"),
+    DeleteEndpoint("E_D"),
+    Endpoint("E", ListEndpoint, CreateEndpoint, ModifyEndpoint, DeleteEndpoint),
 
     SelfComputationResult("CRs"),
     AllComputationResult("CRa", SelfComputationResult),
@@ -44,7 +44,7 @@ enum class Permission(
     PanelMetrics("M_P"),
     Metrics("M", InternalMetrics, PanelMetrics),
 
-    Root("ROOT", User, UserApplication, DataSource, Consumer, ComputationResult, Graph, Metrics);
+    Root("ROOT", User, UserApplication, DataSource, Endpoint, ComputationResult, Graph, Metrics);
 
     val rootId = id.replaceAfter("_", "").replace("_", "")
 
@@ -72,7 +72,7 @@ enum class UserRole(val id: Int, vararg defaultPermissions: Permission) {
         Permission.UserApplication,
         Permission.Graph,
         Permission.DataSource,
-        Permission.Consumer
+        Permission.Endpoint
     ), // UserAdmin + OperationAdmin
     UserAdmin(
         31,
@@ -83,7 +83,7 @@ enum class UserRole(val id: Int, vararg defaultPermissions: Permission) {
         32,
         Permission.Graph,
         Permission.DataSource,
-        Permission.Consumer
+        Permission.Endpoint
     ),
 
     MetricsAdmin(33, Permission.Metrics),
