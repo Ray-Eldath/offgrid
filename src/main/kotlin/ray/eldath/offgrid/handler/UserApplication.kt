@@ -26,7 +26,9 @@ import ray.eldath.offgrid.util.ErrorCodes.commonBadRequest
 import ray.eldath.offgrid.util.ErrorCodes.commonNotFound
 import ray.eldath.offgrid.util.Permission.Companion.expand
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.*
 
 class ListUserApplications(credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
 
@@ -205,7 +207,7 @@ class ApproveUserApplication(private val credentials: Credentials, private val c
         private val ctx = CoroutineScope(Dispatchers.IO)
         private val requestLens = Body.auto<ApproveRequest>().toLens()
 
-        suspend fun sendApproveEmail(
+        fun sendApproveEmail(
             email: String,
             username: String,
             time: LocalDateTime,
@@ -219,7 +221,7 @@ class ApproveUserApplication(private val credentials: Credentials, private val c
                 """
                     尊敬的 $username：
                     
-                    欢迎使用 Offgrid！您的注册申请已于 ${time.format(RFC_1123_DATE_TIME)} 被您组织的管理员正式批准。
+                    欢迎使用 Offgrid！您的注册申请已于 ${time.localized()} 被您组织的管理员正式批准。
                     该管理员为您分配了身份 ${role.name}$displayPermissions。关于这些权限的具体含义，请参阅用户手册，或咨询您组织的 Offgrid 管理员。
                     
                     您现在可以使用该邮箱和您预先设定的密码登录 Offgrid 了。祝使用愉快！
@@ -276,14 +278,12 @@ class RejectUserApplication(private val credentials: Credentials, private val co
         } bindContract Method.GET to ::handler
 
     companion object {
-        private val ctx = CoroutineScope(Dispatchers.IO)
-
-        fun sendRejectEmail(email: String, username: String, time: LocalDateTime) = ctx.launch {
+        fun sendRejectEmail(email: String, username: String, time: LocalDateTime) {
             sendEmail("[Offgrid] 注册失败：您的申请已被拒绝", "applicationrejected", email) {
                 """
                     尊敬的 $username：
                     
-                    我们遗憾地通知您，您向您的组织提交的注册申请已于 ${time.format(RFC_1123_DATE_TIME)} 被您组织的管理员拒绝。
+                    我们遗憾地通知您，您向您的组织提交的注册申请已于 ${time.localized()} 被您组织的管理员拒绝。
                     
                     由于安全策略，任何使用本邮箱的后续注册请求都将被直接拒绝。若您仍需要注册账户，请联系您组织的 Offgrid 管理员以重置您的账户状态。
                     
@@ -350,3 +350,9 @@ object UserApplicationHandler {
                 }
         }
 }
+
+private val dateTimeFormatter =
+    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.FULL, FormatStyle.SHORT)
+        .withLocale(Locale.SIMPLIFIED_CHINESE)
+
+private fun LocalDateTime.localized() = dateTimeFormatter.format(this)

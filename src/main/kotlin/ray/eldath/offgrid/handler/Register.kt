@@ -86,7 +86,7 @@ class Register : ContractHandler {
 
         val TOKEN_EXPIRY_DURATION: Duration = Duration.ofHours(2)
 
-        fun sendConfirmEmail(token: ConfirmEmail.ConfirmUrlToken) = with {
+        fun sendConfirmEmail(token: ConfirmEmail.ConfirmUrlToken) =
             DirectEmailUtil.sendEmail("[Offgrid] 注册确认：验证您的邮箱", "emailconfirm", token.email) {
                 """
                     您好，
@@ -109,7 +109,6 @@ class Register : ContractHandler {
                     此邮件由 Offgrid 系统自动发出，请勿直接回复。若有更多问题请联系您组织的 Offgrid 管理员。
                 """.trimIndent()
             }
-        }
     }
 }
 

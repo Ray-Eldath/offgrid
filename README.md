@@ -89,7 +89,7 @@ $ docker-compose up -d
 $ docker-compose -f docker-compose.yml -f docker-compose.supervision.yml
 ```
 
-It may takes 1-2 minutes for all service to spin up as well as the resource usage turns stable, only after can the entrypoints accessible.
+It may take 1-2 minutes for all service to spin up as well as the resource usage turns stable, only after can the entrypoints accessible.
 
 ### Entrypoints
 
@@ -107,7 +107,7 @@ Panels and static file server will be exposed to the Internet using edge router 
 
 Services not listed above indicates them are not exposed to the Internet. 
 
-Such entrypoints are handled by edge router with service discovery. So if the correspond service is stopped, the related entrypoint will be withdrawn and become invisible while the remaining services still exposed to the Internet.
+Such entrypoints are handled by an edge router with service discovery. So if correspond service is stopped, the related entrypoint will be withdrawn and become invisible while the remaining services still exposed to the Internet.
 
 ## Disclaimer
 

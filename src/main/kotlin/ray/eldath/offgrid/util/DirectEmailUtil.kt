@@ -34,10 +34,8 @@ object DirectEmailUtil {
         fromAlias: String = "Offgrid System",
         textBody: () -> String
     ) = ctx.launch {
-        if (Core.debug) {
+        if (Core.debug)
             TestSuite.debug("email tagged $aliyunTag with subject $subject attempt send to $toAddress:\n${textBody()}")
-            return@launch
-        }
 
         fun error(e: ClientException, type: String = "ClientException"): Unit =
             ("AliyunDirectMail: $type(errCode: ${e.errCode}) thrown when sendEmail to email address $toAddress " +
