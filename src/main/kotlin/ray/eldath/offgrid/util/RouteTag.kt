@@ -25,4 +25,8 @@ object RouteTag {
                 "Endpoint is where actual computation of fresh encrypted messages is done, " +
                 "the DataSource-Endpoint connection is confined by Route."
     )
+    val EntityTag = Tag(
+        "Entity Tag", "Admin: get, create, delete tag(s) of an entity. " +
+                "An Entity can be a datasource or an endpoint."
+    )
 }

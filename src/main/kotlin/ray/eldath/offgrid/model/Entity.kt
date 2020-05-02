@@ -13,7 +13,7 @@ import java.util.*
 data class OutboundEntity(
     val id: String,
     val name: String,
-    val tags: List<String>? = null,
+    val tags: List<OutboundEntityTag>? = null,
     val createTime: LocalDateTime,
     val lastConnectionTime: LocalDateTime? = null
 ) {
@@ -23,9 +23,11 @@ data class OutboundEntity(
         val mock = OutboundEntity(
             UUID.randomUUID().toString(),
             "offgrid-test-entity-1",
-            listOf("test", "internal"),
+            listOf(OutboundEntityTag(0, "test"), OutboundEntityTag(1, "internal")),
             createTime = LocalDateTime.now(),
             lastConnectionTime = LocalDateTime.now()
         )
     }
+
+    data class OutboundEntityTag(val id: Int, val tag: String)
 }

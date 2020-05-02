@@ -37,10 +37,11 @@ create table entity_routes
 
 create table entity_tags
 (
-    id        int auto_increment
+    id          int auto_increment
         primary key,
-    entity_id char(36)    null,
-    tag       varchar(20) null,
+    entity_id   char(36)    null,
+    entity_type int         not null,
+    tag         varchar(20) null,
     constraint entity_tags_entities_id_fk
         foreign key (entity_id) references entities (id)
             on delete cascade

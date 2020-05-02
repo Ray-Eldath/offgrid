@@ -71,13 +71,13 @@ class ListEntityFactory(
                     val select = selectFrom(et)
                         .where(et.ENTITY_ID.eq(it.id))
 
-                    select.fetchInto(EntityTag::class.java) // TODO: bad performance. try to optimize with table join.
+                    select.fetchInto(EntityTag::class.java)
                 }
 
                 OutboundEntity(
                     id = it.id,
                     name = it.name,
-                    tags = tags.map { t -> t.tag },
+                    tags = tags.map { t -> OutboundEntity.OutboundEntityTag(t.id, t.tag) },
                     createTime = it.createTime,
                     lastConnectionTime = it.lastConnectionTime
                 )
@@ -94,12 +94,7 @@ class ListEntityFactory(
                 queries += pageSizeLens
                 security = configuredSecurity
                 outJson()
-                returning(
-                    Status.OK, responseLens to ListResponse(
-                        1,
-                        listOf(OutboundEntity.mock)
-                    )
-                )
+                returning(Status.OK, responseLens to ListResponse(1, listOf(OutboundEntity.mock)))
             } bindContract Method.GET to handler
 
         companion object {

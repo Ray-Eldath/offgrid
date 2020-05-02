@@ -26,6 +26,9 @@ object ErrorCodes {
         val PASSWORD_TOO_LONG = ErrorCode(112, "password too long", BAD_REQUEST)
     }
 
+    object InvalidEntityTag {
+        val TOO_LONG = ErrorCode(120, "tag too long", BAD_REQUEST)
+    }
 
     // 3: invalid state or data
     fun permissionDenied(vararg require: Permission) = permissionDenied(require.toList())

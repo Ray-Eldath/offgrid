@@ -28,5 +28,6 @@ fun RouteMetaDsl.outJson() {
 
 fun ByteArray.toHexString() = joinToString(separator = "") { String.format("%02x", (it.toInt() and 0xFF)) }
 fun <T> Optional<T>.getOrNull(): T? = if (isEmpty) null else get()
+fun <T> Optional<T>.getOrThrow(exception: () -> Exception): T = getOrNull() ?: throw exception()
 fun Any.asJsonString(): String = jacksonObjectMapper().writeValueAsString(this)
 fun Response.asJson(): JsonNode = jacksonObjectMapper().readTree(this.bodyString())
