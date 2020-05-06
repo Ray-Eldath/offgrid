@@ -2,6 +2,7 @@ package ray.eldath.offgrid.handler
 
 import org.http4k.contract.security.Security
 import ray.eldath.offgrid.factory.CreateEntityFactory
+import ray.eldath.offgrid.factory.DeleteEntityFactory
 import ray.eldath.offgrid.factory.ListEntityFactory
 import ray.eldath.offgrid.factory.ModifyEntityFactory
 import ray.eldath.offgrid.util.EntityType
@@ -25,3 +26,9 @@ class ModifyEndpoint(credentials: Credentials, security: Security) :
         summary = "Modify endpoint"
         tags += RouteTag.Endpoint
     }, Permission.ModifyEndpoint)
+
+class DeleteEndpoint(credentials: Credentials, security: Security) :
+    ContractHandler by DeleteEntityFactory(credentials, security).makeHandler("/endpoint", EntityType.Endpoint, {
+        summary = "Delete endpoint"
+        tags += RouteTag.Endpoint
+    }, Permission.DeleteEndpoint)

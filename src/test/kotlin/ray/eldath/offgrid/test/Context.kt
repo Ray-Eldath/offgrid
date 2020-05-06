@@ -1,5 +1,10 @@
 package ray.eldath.offgrid.test
 
+import org.http4k.contract.security.Security
+import org.http4k.core.Filter
+import org.http4k.lens.Meta
+import org.http4k.lens.ParamMeta
+import org.http4k.lens.RequestContextLens
 import ray.eldath.offgrid.component.InboundUser
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.ExtraPermission
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.User
@@ -26,6 +31,7 @@ object Context {
         LocalDateTime.now().minusWeeks(6)
     )
     val inbound = InboundUser(user, listOf(ExtraPermission(1, Permission.User, true)))
+    val inboundRoot = InboundUser(user)
 
     val application =
         UserApplication(
@@ -38,4 +44,15 @@ object Context {
             "offgrid test",
             true
         )
+
+    object MockSecurity : Security {
+        val mockCredentials =
+            RequestContextLens(
+                Meta(false, "", ParamMeta.NullParam, ""),
+                { inboundRoot },
+                { _, req -> req }
+            )
+
+        override val filter: Filter = Filter { it }
+    }
 }

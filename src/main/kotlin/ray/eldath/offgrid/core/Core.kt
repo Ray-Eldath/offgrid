@@ -69,10 +69,12 @@ object Core {
         allRoutes += ListDataSource(credentials, security)
         allRoutes += CreateDataSource(credentials, security)
         allRoutes += ModifyDataSource(credentials, security)
+        allRoutes += DeleteDataSource(credentials, security)
 
         allRoutes += ListEndpoint(credentials, security)
         allRoutes += CreateEndpoint(credentials, security)
         allRoutes += ModifyEndpoint(credentials, security)
+        allRoutes += DeleteEndpoint(credentials, security)
 
         allRoutes += TagEntity(credentials, security)
         allRoutes += DeleteEntityTag(credentials, security)

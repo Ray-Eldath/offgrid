@@ -8,7 +8,7 @@ create table entities
 (
     id                   char(36)     not null
         primary key,
-    name                 varchar(20)  null,
+    name                 varchar(50)  null,
     type                 int          not null,
     access_key_id        char(36)     not null,
     access_key_secret    varchar(150) null,

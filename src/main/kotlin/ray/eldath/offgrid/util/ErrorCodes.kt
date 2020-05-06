@@ -27,7 +27,11 @@ object ErrorCodes {
     }
 
     object InvalidEntityTag {
-        val TOO_LONG = ErrorCode(120, "tag too long", BAD_REQUEST)
+        val TOO_LONG = ErrorCode(120, "tag is too long", BAD_REQUEST)
+    }
+
+    object InvalidEntityName {
+        val TOO_LONG = ErrorCode(121, "name is too long", BAD_REQUEST)
     }
 
     // 3: invalid state or data

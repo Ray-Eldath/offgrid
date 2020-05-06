@@ -3,16 +3,13 @@ package ray.eldath.offgrid.test.handler
 import org.http4k.core.HttpMessage
 import org.http4k.core.Method
 import org.http4k.core.Request
-import org.http4k.core.with
 import org.junit.jupiter.api.*
-import ray.eldath.offgrid.core.Core.credentials
-import ray.eldath.offgrid.core.Core.security
 import ray.eldath.offgrid.generated.offgrid.tables.ExtraPermissions
 import ray.eldath.offgrid.generated.offgrid.tables.Users
 import ray.eldath.offgrid.generated.offgrid.tables.records.UsersRecord
 import ray.eldath.offgrid.handler.ListUsers
-import ray.eldath.offgrid.handler.Login
 import ray.eldath.offgrid.test.Context
+import ray.eldath.offgrid.test.Context.MockSecurity
 import ray.eldath.offgrid.test.TestDatabase
 import ray.eldath.offgrid.util.Permission
 import ray.eldath.offgrid.util.UserRole
@@ -28,7 +25,7 @@ import java.time.LocalDateTime
 class TestUsers {
     @Nested
     inner class TestListUsers {
-        private val listUsers = ListUsers(credentials, security).compile()
+        private val listUsers = ListUsers(MockSecurity.mockCredentials, MockSecurity).compile()
         private val resp = { message: HttpMessage ->
             ListUsers.responseLens(message).result.also { println(it) }.map { it.username }.expect()
         }
@@ -73,13 +70,7 @@ class TestUsers {
         private fun request(vararg queries: Pair<String, String>) =
             queries.joinToString("&") { (key, value) ->
                 URLEncoder.encode(value, Charsets.UTF_8).let { "$key=$it" }
-            }.let { Request(Method.GET, "/users" + if (queries.isNotEmpty()) "?$it" else "").auth() }
-    }
-
-    @Test
-    @Order(2)
-    fun `login by root`() {
-        rootBearer
+            }.let { Request(Method.GET, "/users" + if (queries.isNotEmpty()) "?$it" else "") }
     }
 
     private val usernameEmail = listOf(
@@ -96,20 +87,12 @@ class TestUsers {
         listOf(Permission.RejectUserApplication to true)
     )
     private val users = arrayListOf<UsersRecord>()
-    private val rootBearer by lazy {
-        Login.responseLens(
-            Login().compile()(
-                Request(Method.POST, "/login")
-                    .with(Login.requestLens of Login.LoginRequest("omega@alpha.com", "123"))
-            )
-        ).bearer
-    }
 
     @Test
     @Order(1) // lower means higher priority
     fun `insert whole data`() {
-        assert(usernameEmail.size == roles.size)
-        assert(usernameEmail.size == permissions.size)
+        require(usernameEmail.size == roles.size)
+        require(usernameEmail.size == permissions.size)
 
         transaction {
             val u = Users.USERS
@@ -153,6 +136,5 @@ class TestUsers {
         TestDatabase.`delete test data`()
     }
 
-    private fun Request.auth() = header("Authorization", "Bearer $rootBearer")
     private fun <T> T.expect() = expectThat(this)
 }

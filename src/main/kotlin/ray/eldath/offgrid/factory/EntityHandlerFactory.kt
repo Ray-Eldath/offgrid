@@ -98,11 +98,11 @@ class ListEntityFactory(
             } bindContract Method.GET to handler
 
         companion object {
-            private val responseLens = Body.auto<ListResponse>().toLens()
-
             private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
             private val pageSizeLens =
                 Query.int().defaulted("pre_page", 10, "the size of elements that one page should contain.")
+
+            val responseLens = Body.auto<ListResponse>().toLens()
 
             data class ListResponse(val total: Int, val result: List<OutboundEntity>)
         }
@@ -135,11 +135,12 @@ class CreateEntityFactory(
         private val handler: HttpHandler = { req ->
             credentials(req).requirePermission(*requiredPermissions)
 
-            val (name) = Entities.EntityName.lens(req)
+            val (name) = Entities.EntityName.lens(req).also { it.check() }
             val accessKey = AccessKey.generate()
 
             transaction {
                 newRecord(Tables.ENTITIES).apply {
+                    id = UUID.randomUUID().toString()
                     this.name = name
                     type = entityType.id
                     accessKeyId = accessKey.id
@@ -148,7 +149,7 @@ class CreateEntityFactory(
                 }.also { it.store() }
             }.let {
                 Response(Status.OK).with(
-                    responseLens of CreateDataSourceResponse(
+                    responseLens of CreateEndpointResponse(
                         id = it.id,
                         accessKeyId = accessKey.id,
                         accessKeySecret = accessKey.secret
@@ -168,9 +169,9 @@ class CreateEntityFactory(
 
         companion object {
             @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-            data class CreateDataSourceResponse(val id: String, val accessKeyId: String, val accessKeySecret: String)
+            data class CreateEndpointResponse(val id: String, val accessKeyId: String, val accessKeySecret: String)
 
-            private val responseLens = Body.auto<CreateDataSourceResponse>().toLens()
+            val responseLens = Body.auto<CreateEndpointResponse>().toLens()
         }
     }
 }
@@ -201,7 +202,7 @@ class ModifyEntityFactory(
         private fun handler(id: UUID): HttpHandler = { req ->
             credentials(req).requirePermission(*requiredPermissions)
 
-            val (name) = Entities.EntityName.lens(req)
+            val (name) = Entities.EntityName.lens(req).also { it.check() }
             transaction {
                 val e = Tables.ENTITIES
                 val ds = Entities.findById(id.toString()) ?: throw ErrorCodes.commonNotFound()()
@@ -232,6 +233,59 @@ class ModifyEntityFactory(
 }
 // endregion
 
+// region DeleteEntityFactory
+class DeleteEntityFactory(
+    private val factoryCredentials: Credentials,
+    private val factorySecurity: Security
+) : EntityHandlerFactory {
+
+    override fun makeHandler(
+        route: String,
+        entityType: EntityType,
+        routeMetaModifier: RouteMetaDsl.() -> Unit,
+        vararg requiredPermissions: Permission
+    ) =
+        DeleteEntity(route, requiredPermissions, routeMetaModifier, factoryCredentials, factorySecurity)
+
+    class DeleteEntity(
+        private val route: String,
+        private val requiredPermissions: Array<out Permission>,
+        private val routeMetaModifier: (RouteMetaDsl) -> Unit,
+        private val credentials: Credentials,
+        private val configuredSecurity: Security
+    ) : ContractHandler {
+
+        private fun handler(id: UUID): HttpHandler = { req ->
+            credentials(req).requirePermission(*requiredPermissions)
+
+            transaction {
+                val e = Tables.ENTITIES
+                val ds = Entities.findById(id.toString()) ?: throw ErrorCodes.commonNotFound()()
+
+                deleteFrom(e)
+                    .where(e.ID.eq(ds.id)).execute()
+            }
+
+            Response(Status.OK)
+        }
+
+        override fun compile(): ContractRoute =
+            route / Path.uuid().of("entityId", routeDesc) meta {
+                routeMetaModifier(this)
+
+                security = configuredSecurity
+                inJson()
+                returning(Status.OK to "name of the specified entity has been successfully deleted.")
+                exception(ErrorCodes.commonNotFound())
+            } bindContract Method.DELETE to ::handler
+
+        companion object {
+            const val routeDesc = "id of the entity, i.e. DataSource or Endpoint, represented as UUID"
+        }
+    }
+}
+// endregion
+
 interface EntityHandlerFactory {
     fun makeHandler(
         route: String,
@@ -243,6 +297,11 @@ interface EntityHandlerFactory {
 
 object Entities {
     data class EntityName(val name: String) {
+        fun check() {
+            if (name.length > 50)
+                throw ErrorCodes.InvalidEntityName.TOO_LONG()
+        }
+
         companion object {
             val lens = Body.auto<EntityName>().toLens()
 
@@ -253,8 +312,9 @@ object Entities {
     fun findById(id: String): Entity? =
         transaction {
             val e = Tables.ENTITIES
+
             selectFrom(e)
                 .where(e.ID.eq(id))
-                .fetchOptional { it.into(e).into(Entity::class.java) }.getOrNull()
+                .fetchOptionalInto(Entity::class.java).getOrNull()
         }
 }

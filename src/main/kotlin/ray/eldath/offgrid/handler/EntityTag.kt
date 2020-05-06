@@ -18,7 +18,7 @@ import ray.eldath.offgrid.util.*
 import java.util.*
 
 class TagEntity(private val credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
-    private class TagEntityRequest(val tag: String) {
+    data class TagEntityRequest(val tag: String) {
         fun check() {
             if (tag.length >= 20)
                 throw ErrorCodes.InvalidEntityTag.TOO_LONG()
@@ -26,7 +26,7 @@ class TagEntity(private val credentials: Credentials, private val configuredSecu
     }
 
     private fun handler(uuid: UUID): HttpHandler = { req: Request ->
-        val tagString = requestLens(req).also { it.check() }.tag
+        val (tagString) = requestLens(req).also { it.check() }
 
         transaction {
             val e = Entities.ENTITIES
