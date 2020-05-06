@@ -77,7 +77,7 @@ object Core {
         allRoutes += DeleteEndpoint(credentials, security)
 
         allRoutes += TagEntity(credentials, security)
-        allRoutes += DeleteEntityTag(credentials, security)
+        allRoutes += UntagEntity(credentials, security)
 
         allRoutes += Self(credentials, security)
         allRoutes += DeleteSelf(credentials, security)

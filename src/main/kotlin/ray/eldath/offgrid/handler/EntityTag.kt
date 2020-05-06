@@ -25,7 +25,9 @@ class TagEntity(private val credentials: Credentials, private val configuredSecu
         }
     }
 
-    private fun handler(uuid: UUID): HttpHandler = { req: Request ->
+    data class TagEntityResponse(val id: Int)
+
+    private fun handler(uuid: UUID, useless: String): HttpHandler = { req: Request ->
         val (tagString) = requestLens(req).also { it.check() }
 
         transaction {
@@ -43,20 +45,22 @@ class TagEntity(private val credentials: Credentials, private val configuredSecu
             else if (entity.type == EntityType.Endpoint.id)
                 credentials(req).requirePermission(Permission.ModifyEndpoint)
 
-            newRecord(et).apply {
+            val record = newRecord(et)
+
+            record.apply {
                 entityId = entity.id
                 entityType = entity.type
                 tag = tagString
             }.insert()
-        }
 
-        Response(Status.OK)
+            record
+        }.let { Response(Status.OK).with(responseLens of TagEntityResponse(it.id)) }
     }
 
     override fun compile() =
-        "/entity" / Path.uuid().of("entityUUID", "UUID of DataSource or Endpoint") meta {
+        "/entity" / Path.uuid().of("entityUUID", "UUID of DataSource or Endpoint") / "tag" meta {
             summary = "Tag an entity"
-            description = "Entity can be a data source or an endpoint."
+            description = "Entity can be a DataSource or an Endpoint."
             tags += RouteTag.EntityTag
             security = configuredSecurity
 
@@ -66,11 +70,12 @@ class TagEntity(private val credentials: Credentials, private val configuredSecu
         } bindContract Method.POST to ::handler
 
     companion object {
-        private val requestLens = Body.auto<TagEntityRequest>().toLens()
+        val requestLens = Body.auto<TagEntityRequest>().toLens()
+        val responseLens = Body.auto<TagEntityResponse>().toLens()
     }
 }
 
-class DeleteEntityTag(
+class UntagEntity(
     private val credentials: Credentials,
     private val configuredSecurity: Security
 ) : ContractHandler {
@@ -90,20 +95,19 @@ class DeleteEntityTag(
                 }
 
             deleteFrom(et)
-                .where(et.ID.eq(id))
+                .where(et.ID.eq(id)).execute()
         }
 
         Response(Status.OK)
     }
 
     override fun compile(): ContractRoute =
-        "/entity" / Path.int().of("tagId", "Id of the tag.") meta {
-            summary = "Delete a tag"
-            description = "Delete a tag."
+        "/entity/tags" / Path.int().of("tagId", "Id of the tag.") meta {
+            summary = "Untag an entity"
+            description = "Entity can be a DataSource or an Endpoint."
             tags += RouteTag.EntityTag
             security = configuredSecurity
 
-            inJson()
             exception(ErrorCodes.InvalidEntityTag.TOO_LONG)
         } bindContract Method.DELETE to ::handler
 }
