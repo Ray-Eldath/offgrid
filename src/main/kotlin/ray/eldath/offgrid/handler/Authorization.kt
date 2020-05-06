@@ -84,10 +84,12 @@ class Login : ContractHandler {
 
             receiving(requestLens to LoginRequest("alpha.beta@omega.com", "mypassword"))
             returning(
-                Status.OK, responseLens to LoginResponse(
-                    UUID.randomUUID().toString(), expireIn,
-                    OutboundUser.mock
-                )
+                Status.OK, responseLens to
+                        LoginResponse(
+                            bearer = UUID.randomUUID().toString(),
+                            expireIn = expireIn,
+                            self = OutboundUser.mock
+                        )
             )
             exception(
                 ErrorCodes.INVALID_EMAIL_ADDRESS,
@@ -154,7 +156,6 @@ class Logout(private val configuredSecurity: Security) : ContractHandler {
             summary = "Logout"
             tags += RouteTag.Authorization
             security = configuredSecurity
-            allJson()
 
             returning(Status.OK to "given bearer has been invalidated in the cache")
         } bindContract Method.GET to handler()

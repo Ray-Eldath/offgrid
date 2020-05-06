@@ -13,7 +13,6 @@ import org.http4k.lens.Path
 import org.http4k.lens.Query
 import org.http4k.lens.int
 import org.http4k.lens.uuid
-import ray.eldath.offgrid.component.ApiExceptionHandler.exception
 import ray.eldath.offgrid.generated.offgrid.Tables
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.Entity
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.EntityTag
@@ -93,6 +92,7 @@ class ListEntityFactory(
                 queries += pageLens
                 queries += pageSizeLens
                 security = configuredSecurity
+
                 outJson()
                 returning(Status.OK, responseLens to ListResponse(1, listOf(OutboundEntity.mock)))
             } bindContract Method.GET to handler
@@ -165,6 +165,13 @@ class CreateEntityFactory(
                 security = configuredSecurity
                 allJson()
                 receiving(Entities.EntityName.lens to Entities.EntityName.mock)
+                returning(Status.OK, responseLens to AccessKey.generate().let {
+                    CreateEndpointResponse(
+                        id = UUID.randomUUID().toString(),
+                        accessKeyId = it.id,
+                        accessKeySecret = it.secret
+                    )
+                })
             } bindContract Method.PUT to handler
 
         companion object {
@@ -221,9 +228,9 @@ class ModifyEntityFactory(
 
                 security = configuredSecurity
                 inJson()
+
                 receiving(Entities.EntityName.lens to Entities.EntityName.mock)
                 returning(Status.OK to "name of the specified entity has been successfully update.")
-                exception(ErrorCodes.commonNotFound())
             } bindContract Method.PATCH to ::handler
 
         companion object {
@@ -275,8 +282,8 @@ class DeleteEntityFactory(
 
                 security = configuredSecurity
                 inJson()
+
                 returning(Status.OK to "name of the specified entity has been successfully deleted.")
-                exception(ErrorCodes.commonNotFound())
             } bindContract Method.DELETE to ::handler
 
         companion object {

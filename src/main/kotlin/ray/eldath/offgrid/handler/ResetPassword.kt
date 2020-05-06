@@ -2,9 +2,6 @@ package ray.eldath.offgrid.handler
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategy
 import com.fasterxml.jackson.databind.annotation.JsonNaming
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import org.http4k.contract.ContractRoute
 import org.http4k.contract.div
 import org.http4k.contract.meta
@@ -42,8 +39,7 @@ object ResetPassword {
                 val user = select()
                     .from(u)
                     .where(u.EMAIL.eq(email))
-                    .fetchOptional { it.into(u).into(User::class.java) }
-                    .getOrNull()
+                    .fetchOptionalInto(User::class.java).getOrNull()
 
                 val urlToken = ResetPasswordUrlToken.generate(email)
 
@@ -76,9 +72,8 @@ object ResetPassword {
 
         companion object {
             private val requestLens = Body.auto<InvokeRequest>().toLens()
-            private val ctx = CoroutineScope(Dispatchers.IO)
 
-            fun sendInvokeEmail(token: ResetPasswordUrlToken) = ctx.launch {
+            fun sendInvokeEmail(token: ResetPasswordUrlToken) =
                 DirectEmailUtil.sendEmail("[Offgrid] 找回您的密码", "resetpasswordinvoke", token.email) {
                     """
                         您好，
@@ -101,7 +96,6 @@ object ResetPassword {
                         此邮件由 Offgrid 系统自动发出，请勿直接回复。若有更多问题请联系您组织的 Offgrid 管理员。
                     """.trimIndent()
                 }
-            }
         }
     }
 
@@ -113,7 +107,7 @@ object ResetPassword {
                 .from(rpa)
                 .where(rpa.TOKEN.eq(token.token))
                 .and(rpa.EMAIL.eq(token.email))
-                .fetchOptional { it.into(rpa).into(ResetPasswordApplication::class.java) }
+                .fetchOptionalInto(ResetPasswordApplication::class.java)
                 .orElseThrow { ErrorCodes.TOKEN_NOT_FOUND() }
                 .also {
                     if (it.requestTime.plus(TOKEN_EXPIRY_DURATION).isBefore(LocalDateTime.now()))

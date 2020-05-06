@@ -64,8 +64,9 @@ class TagEntity(private val credentials: Credentials, private val configuredSecu
             tags += RouteTag.EntityTag
             security = configuredSecurity
 
-            inJson()
+            allJson()
             exception(ErrorCodes.InvalidEntityTag.TOO_LONG)
+            returning(Status.OK, responseLens to TagEntityResponse(1103))
             receiving(requestLens to TagEntityRequest("demo"))
         } bindContract Method.POST to ::handler
 
@@ -109,5 +110,6 @@ class UntagEntity(
             security = configuredSecurity
 
             exception(ErrorCodes.InvalidEntityTag.TOO_LONG)
+            returning(Status.OK to "specified tag has been successfully deleted.")
         } bindContract Method.DELETE to ::handler
 }
