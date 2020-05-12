@@ -53,7 +53,7 @@ object ErrorCodes {
         FORBIDDEN
     )
     val USER_ALREADY_REGISTERED =
-        ErrorCode(313, "user with the given email has already registered in ouy system.", CONFLICT)
+        ErrorCode(313, "user with the given email has already registered in our system.", CONFLICT)
 
     val TOKEN_EXPIRED = ErrorCode(314, "given token has expired, try to request a new token.", FORBIDDEN)
 

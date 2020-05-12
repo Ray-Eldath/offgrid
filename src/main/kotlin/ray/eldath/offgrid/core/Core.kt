@@ -19,10 +19,7 @@ import org.jooq.DSLContext
 import org.jooq.SQLDialect
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
-import ray.eldath.offgrid.component.ApiException
-import ray.eldath.offgrid.component.ApiExceptionHandler
-import ray.eldath.offgrid.component.BearerSecurity
-import ray.eldath.offgrid.component.Metrics
+import ray.eldath.offgrid.component.*
 import ray.eldath.offgrid.handler.*
 import ray.eldath.offgrid.util.RouteTag
 import java.io.File
@@ -89,6 +86,8 @@ object Core {
         allRoutes += DeleteSelf(credentials, security)
 
         allRoutes += MetaUserModel(security)
+
+        allRoutes += Router.PostData
 
         allRoutes += Echo()
         allRoutes += Require()

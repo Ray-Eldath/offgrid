@@ -135,13 +135,14 @@ class CreateEntityFactory(
         private val handler: HttpHandler = { req ->
             credentials(req).requirePermission(*requiredPermissions)
 
-            val (name) = Entities.EntityName.lens(req).also { it.check() }
+            val (name, postUrl) = Entities.EntityNameUrl.lens(req).also { it.check() }
             val accessKey = AccessKey.generate()
 
             transaction {
                 newRecord(Tables.ENTITIES).apply {
                     id = UUID.randomUUID().toString()
                     this.name = name
+                    this.postUrl = postUrl
                     type = entityType.id
                     accessKeyId = accessKey.id
                     accessKeySecret = accessKey.secret
@@ -164,7 +165,7 @@ class CreateEntityFactory(
 
                 security = configuredSecurity
                 allJson()
-                receiving(Entities.EntityName.lens to Entities.EntityName.mock)
+                receiving(Entities.EntityNameUrl.lens to Entities.EntityNameUrl.mock)
                 returning(Status.OK, responseLens to AccessKey.generate().let {
                     CreateEndpointResponse(
                         id = UUID.randomUUID().toString(),
@@ -209,7 +210,7 @@ class ModifyEntityFactory(
         private fun handler(id: UUID): HttpHandler = { req ->
             credentials(req).requirePermission(*requiredPermissions)
 
-            val (name) = Entities.EntityName.lens(req).also { it.check() }
+            val (name) = Entities.EntityNameUrl.lens(req).also { it.check() }
             transaction {
                 val e = Tables.ENTITIES
                 val ds = Entities.findById(id.toString()) ?: throw ErrorCodes.commonNotFound()()
@@ -229,7 +230,7 @@ class ModifyEntityFactory(
                 security = configuredSecurity
                 inJson()
 
-                receiving(Entities.EntityName.lens to Entities.EntityName.mock)
+                receiving(Entities.EntityNameUrl.lens to Entities.EntityNameUrl.mock)
                 returning(Status.OK to "name of the specified entity has been successfully update.")
             } bindContract Method.PATCH to ::handler
 
@@ -303,16 +304,16 @@ interface EntityHandlerFactory {
 }
 
 object Entities {
-    data class EntityName(val name: String) {
+    data class EntityNameUrl(val name: String, val postUrl: String) {
         fun check() {
             if (name.length > 50)
                 throw ErrorCodes.InvalidEntityName.TOO_LONG()
         }
 
         companion object {
-            val lens = Body.auto<EntityName>().toLens()
+            val lens = Body.auto<EntityNameUrl>().toLens()
 
-            val mock = EntityName("offgrid-test-entity-1")
+            val mock = EntityNameUrl("offgrid-test-entity-1", "https://github.com/Ray-Eldath/post_data")
         }
     }
 

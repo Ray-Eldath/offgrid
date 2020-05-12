@@ -21,7 +21,7 @@ import strikt.assertions.*
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 class TestEntity {
     companion object {
-        private val mock = Entities.EntityName.mock
+        private val mock = Entities.EntityNameUrl.mock
 
         private val createEndpoint = CreateEndpoint(MockSecurity.mockCredentials, MockSecurity).compile()
         private val listEndpoint = ListEndpoint(MockSecurity.mockCredentials, MockSecurity).compile()
@@ -30,8 +30,8 @@ class TestEntity {
 
         fun createEndpoint(): CreateEndpointResponse =
             createEndpoint(
-                "/endpoint".PUT()
-                    .with(Entities.EntityName.lens of mock)
+                "/endpoint".POST()
+                    .with(Entities.EntityNameUrl.lens of mock)
             ).expectOk().parse(CreateEntityFactory.CreateEntity.responseLens)
 
         fun listEndpoints(): ListEntityFactory.ListEntity.Companion.ListResponse =
@@ -70,7 +70,7 @@ class TestEntity {
 
         modifyEndpoint(
             "/endpoint/${createResponse.id}".PATCH()
-                .with(Entities.EntityName.lens of mock.copy(name = modifiedName))
+                .with(Entities.EntityNameUrl.lens of mock.copy(name = modifiedName))
         ).expectOk()
 
         // list again

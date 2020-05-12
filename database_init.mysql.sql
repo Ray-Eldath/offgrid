@@ -12,6 +12,7 @@ create table entities
     type                 int          not null,
     access_key_id        char(36)     not null,
     access_key_secret    varchar(150) null,
+    post_url             varchar(256) null,
     create_time          datetime     not null,
     last_connection_time datetime     null,
     constraint entities_access_id_uindex

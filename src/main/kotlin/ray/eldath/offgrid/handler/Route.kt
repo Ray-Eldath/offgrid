@@ -10,6 +10,7 @@ import org.http4k.format.Jackson.auto
 import org.http4k.lens.Path
 import org.http4k.lens.Query
 import org.http4k.lens.int
+import ray.eldath.offgrid.component.Router
 import ray.eldath.offgrid.factory.Entities
 import ray.eldath.offgrid.generated.offgrid.tables.EntityRoutes
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.EntityRoute
@@ -76,6 +77,8 @@ class CreateRoute(private val credentials: Credentials, private val configuredSe
                 toId = to.toString()
             }.store()
         }
+
+        Router.flushRoute()
 
         Response(Status.OK)
     }
