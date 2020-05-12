@@ -172,7 +172,7 @@ class CreateEntityFactory(
                         accessKeySecret = it.secret
                     )
                 })
-            } bindContract Method.PUT to handler
+            } bindContract Method.POST to handler
 
         companion object {
             @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
@@ -315,6 +315,8 @@ object Entities {
             val mock = EntityName("offgrid-test-entity-1")
         }
     }
+
+    fun findById(id: UUID): Entity? = findById(id.toString())
 
     fun findById(id: String): Entity? =
         transaction {

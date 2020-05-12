@@ -108,7 +108,7 @@ class ListUsers(credentials: Credentials, private val configuredSecurity: Securi
 
             ListResponse(
                 total = fetchCount(prefix),
-                result = prefix.orderBy(u.ID).limit(pageSize).offset((page - 1) * pageSize)
+                result = prefix.orderBy(u.ID).limit(pageSize).offset(Pagination.offset(page, pageSize))
                     .fetchInto(u)
                     .orEmpty()
                     .map {

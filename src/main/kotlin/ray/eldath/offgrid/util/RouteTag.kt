@@ -29,4 +29,8 @@ object RouteTag {
         "Entity Tag", "Admin: get, create, delete tag(s) of an entity. " +
                 "An Entity can be a datasource or an endpoint."
     )
+    val Route = Tag(
+        "Route", "Admin: list, enable, disable, delete a route. " +
+                "A route is a connection path from DataSource to Endpoint."
+    )
 }
