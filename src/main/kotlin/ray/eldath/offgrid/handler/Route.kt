@@ -15,12 +15,16 @@ import ray.eldath.offgrid.factory.Entities
 import ray.eldath.offgrid.generated.offgrid.tables.EntityRoutes
 import ray.eldath.offgrid.generated.offgrid.tables.pojos.EntityRoute
 import ray.eldath.offgrid.util.*
+import ray.eldath.offgrid.util.ErrorCodes.commonInternalServerError
 import ray.eldath.offgrid.util.ErrorCodes.commonNotFound
+import ray.eldath.offgrid.util.Utils.randomUUIDString
 import java.util.*
 
 class ListRoute(private val credentials: Credentials, private val configuredSecurity: Security) : ContractHandler {
+    data class ListResponseEntity(val id: String, val name: String)
+
     @JsonNaming(PropertyNamingStrategy.SnakeCaseStrategy::class)
-    data class ListResponseEntry(val id: Int, val state: Int, val from: String, val to: String)
+    data class ListResponseEntry(val id: Int, val state: Int, val from: ListResponseEntity, val to: ListResponseEntity)
     data class ListResponse(val total: Int, val result: List<ListResponseEntry>)
 
     private val pageLens = Query.int().defaulted("page", 1, "the n-th page of result")
@@ -35,11 +39,33 @@ class ListRoute(private val credentials: Credentials, private val configuredSecu
 
         transaction {
             val r = EntityRoutes.ENTITY_ROUTES
+            val e = ray.eldath.offgrid.generated.offgrid.tables.Entities.ENTITIES
 
-            fetchCount(r) to
-                    selectFrom(r).limit(pageSize).offset(Pagination.offset(page, pageSize))
-                        .fetchInto(EntityRoute::class.java)
-                        .map { ListResponseEntry(it.id, it.state, it.fromId, it.toId) }
+            val routes = selectFrom(r).limit(pageSize).offset(Pagination.offset(page, pageSize))
+                .fetchInto(EntityRoute::class.java)
+            val entities =
+                select(e.ID, e.NAME).from(e)
+                    .where(
+                        e.ID.`in`(routes.map { it.fromId })
+                            .or(e.ID.`in`(routes.map { it.toId }))
+                    ).fetch().intoMap(e.ID, e.NAME)
+
+            fetchCount(r) to routes.map {
+                ListResponseEntry(
+                    it.id,
+                    it.state,
+                    from = ListResponseEntity(
+                        it.fromId,
+                        entities[it.fromId]
+                            ?: throw commonInternalServerError("foreign key rule for `entities.fromId` violated")()
+                    ),
+                    to = ListResponseEntity(
+                        it.toId,
+                        entities[it.toId]
+                            ?: throw commonInternalServerError("foreign key rule for `entities.toId` violated")()
+                    )
+                )
+            }
         }.let { Response(Status.OK).with(responseLens of ListResponse(it.first, it.second)) }
     }
 
@@ -51,7 +77,17 @@ class ListRoute(private val credentials: Credentials, private val configuredSecu
             security = configuredSecurity
             outJson()
 
-            returning(Status.OK to "Specified route has been created and enabled.")
+            returning(
+                Status.OK, responseLens to ListResponse(
+                    1, listOf(
+                        ListResponseEntry(
+                            1103, 0,
+                            ListResponseEntity(randomUUIDString, "offgrid-test-1"),
+                            ListResponseEntity(randomUUIDString, "offgrid-test-1")
+                        )
+                    )
+                )
+            )
         } bindContract Method.GET to handler
 
     companion object {
