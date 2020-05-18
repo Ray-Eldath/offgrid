@@ -46,13 +46,13 @@ class ListRoute(private val credentials: Credentials, private val configuredSecu
     override fun compile() =
         "/routes" meta {
             summary = "List routes"
-            description = "List all routes. For field \"state\", `0` stands for enbled and `1` stands for disabled."
+            description = "List all routes. For field \"state\", `0` stands for enabled and `1` stands for disabled."
             tags += RouteTag.Route
             security = configuredSecurity
             outJson()
 
             returning(Status.OK to "Specified route has been created and enabled.")
-        } bindContract Method.POST to handler
+        } bindContract Method.GET to handler
 
     companion object {
         val responseLens = Body.auto<ListResponse>().toLens()

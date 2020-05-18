@@ -105,7 +105,7 @@ services:
   hydra-migrate:
     depends_on:
       - mysql
-    image: oryd/hydra
+    image: oryd/hydra:latest
     environment:
       - DSN=mysql://root:${OFFGRID_DATABASE_ROOT_PASSWORD}@tcp(mysql:3306)/hydra?max_conns=20&max_idle_conns=4
     networks:
@@ -119,13 +119,14 @@ services:
   hydra-init:
     depends_on:
       - hydra-migrate
-    image: oryd/hydra
+    image: oryd/hydra:latest
     environment:
       - HYDRA_ADMIN_URL=http://hydra:4445
     networks:
       - offgrid
     command: |
-      clients create \
+      clients \
+      create \
       --skip-tls-verify \
       --id ${OFFGRID_GRAFANA_OAUTH_CLIENT_ID} \
       --secret ${OFFGRID_GRAFANA_OAUTH_CLIENT_SECRET} \
@@ -177,9 +178,10 @@ services:
       - "traefik.http.routers.backend.rule=Host(`api.${OFFGRID_DOMAIN}`)"
       - "traefik.http.middlewares.cors.headers.accesscontrolallowmethods=OPTIONS,GET,POST,PUT,PATCH,DELETE"
       - "traefik.http.middlewares.cors.headers.accesscontrolalloworiginlist=${OFFGRID_HOST}"
+      - "traefik.http.middlewares.cors.headers.accesscontrolallowheaders=Content-Type,Authorization"
       - "traefik.http.middlewares.cors.headers.accesscontrolmaxage=100"
       - "traefik.http.middlewares.cors.headers.addvaryheader=true"
-      - "traefik.http.routers.backend.middlewares=cors,compress"
+      - "traefik.http.routers.backend.middlewares=compress,cors"
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=mainresolver"
