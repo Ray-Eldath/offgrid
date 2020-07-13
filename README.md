@@ -1,7 +1,5 @@
 # Offgrid
 
-Next-generation FHE-MPC platform.
-
 
 ## Architecture
 
@@ -108,9 +106,3 @@ Panels and static file server will be exposed to the Internet using edge router 
 Services not listed above indicates them are not exposed to the Internet. 
 
 Such entrypoints are handled by an edge router with service discovery. So if correspond service is stopped, the related entrypoint will be withdrawn and become invisible while the remaining services still exposed to the Internet.
-
-## Disclaimer
-
-Project Offgrid is developed by *IllegalSkillsException*. Most code-related components is developed by [Ray Eldath](https://github.com/Ray-Eldath)).
-
-Does not guarantee availability, usability, safety as well as maintenance.
